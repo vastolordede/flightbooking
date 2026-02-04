@@ -5,33 +5,8 @@
         "type": "java",
         "name": "TestDB",
         "request": "launch",
-        "mainClass": "posrap.TestDB",
-        "projectName": "POSRap_d50f9e4f"
-    },
-    {
-        "type": "java",
-        "name": "POSRap",
-        "request": "launch",
-        "mainClass": "posrap.POSRap",
-        "projectName": "POSRap_d50f9e4f"
-    },
-    {
-        "type": "java",
-        "name": "POSRap",
-        "request": "launch",
-        "mainClass": "posrap.POSRap",
-        "projectName": "POSRap_77c86ac7"
-    },
-    {
-        "type": "java",
-        "name": "Run POSRap (with JDBC)",
-        "request": "launch",
-        "mainClass": "posrap.POSRap",
-        "projectName": "POSRap",
-        "classPaths": [
-            "${workspaceFolder}/bin",
-            "${workspaceFolder}/libs/mssql-jdbc-13.2.1.jre11.jar"
-        ]
+        "mainClass": "flightbooking.TestDB",
+        "projectName": "FlightBooking_2f5377b7"
     }
 ]
 }

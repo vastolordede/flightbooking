@@ -7,8 +7,8 @@
 <!-- the Compile on Save feature is turned off for the project. -->
 <!-- You can turn off the Compile on Save (or Deploy on Save) setting -->
 <!-- in the project's Project Properties dialog box.-->
-<project name="POSRap" default="default" basedir=".">
-    <description>Builds, tests, and runs the project POSRap.</description>
+<project name="FlightBooking" default="default" basedir=".">
+    <description>Builds, tests, and runs the project FlightBooking.</description>
     <import file="nbproject/build-impl.xml"/>
     <!--
 
@@ -58,7 +58,7 @@
 
     An example of overriding the target for project execution could look like this:
 
-        <target name="run" depends="POSRap-impl.jar">
+        <target name="run" depends="-impl.jar">
             <exec dir="bin" executable="launcher.exe">
                 <arg file="${dist.jar}"/>
             </exec>
@@ -72,7 +72,7 @@
     -->
         <!-- Run TestDB with all jars in /libs -->
     <target name="run-testdb" depends="compile">
-        <java classname="posrap.TestDB" fork="true" failonerror="true">
+        <java classname="flightbooking.TestDB" fork="true" failonerror="true">
             <classpath>
                 <!-- compiled classes -->
                 <pathelement location="${build.classes.dir}"/>
