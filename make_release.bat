@@ -1,30 +1,23 @@
 @echo off
 setlocal
 
-REM ====== CONFIG ======
-set APP_JAR=dist\FlightBooking.jar
-set MAIN_CLASS=flightbooking.FlightBooking
+REM 1) Build bằng Ant (NetBeans)
+call ant clean build
+if errorlevel 1 (
+  echo Build failed
+  pause
+  exit /b 1
+)
 
-REM ====== CLEAN & CREATE RELEASE FOLDER ======
-rmdir /s /q release 2>nul
-mkdir release
-mkdir release\dist
-mkdir release\libs
+REM 2) Tao dist neu chua co
+if not exist dist mkdir dist
 
-REM ====== COPY FILES ======
-copy "%APP_JAR%" release\dist\
-xcopy /E /I /Y libs release\libs >nul
+REM 3) Dong goi 2 jar tu build\classes
+jar cfm dist\FlightBooking-ADMIN.jar manifest_admin.mf -C build\classes .
+jar cfm dist\FlightBooking-USER.jar  manifest_user.mf  -C build\classes .
 
-REM ====== CREATE RUN.BAT ======
-(
-echo @echo off
-echo cd /d %%~dp0
-echo echo Running FlightBooking...
-echo java -cp "dist\FlightBooking.jar;libs\*" %MAIN_CLASS%
-) > release\run.bat
-
-echo ===================================
-echo Release created at: release\
-echo Double click release\run.bat
-echo ===================================
-endlocal
+echo.
+echo ==== DONE ====
+echo dist\FlightBooking-ADMIN.jar
+echo dist\FlightBooking-USER.jar
+pause
