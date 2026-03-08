@@ -19,7 +19,7 @@ public class GheDAO extends BaseDAO {
     v = rs.getInt("hangghe_id");
     g.setHangGheId(rs.wasNull() ? null : v);
 
-    v = rs.getInt("tang");                 // ✅ NEW
+    v = rs.getInt("tang");                
     g.setTang(rs.wasNull() ? null : v);
 
     g.setTenGhe(rs.getString("tenghe"));

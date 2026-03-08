@@ -54,12 +54,12 @@ public class ChuyenBayDAO extends BaseDAO {
                 "SELECT cb.chuyenbay_id, cb.tuyenbay_id, cb.hanghangkhong_id, cb.maybay_id, " +
                 "cb.giokhoihanh, cb.gioden, cb.trangthai, " +
                 "tb.sodam AS sodam, " +
-                "sbd.ten_san_bay AS sanbay_di_ten, " +
-                "sbdn.ten_san_bay AS sanbay_den_ten " +
+                "sbd.tensanbay AS sanbay_di_ten, " +
+                "sbdn.tensanbay AS sanbay_den_ten " +
                 "FROM chuyenbay cb " +
                 "JOIN tuyenbay tb ON tb.tuyenbay_id = cb.tuyenbay_id " +
-                "JOIN sanbay sbd ON sbd.sanbay_id = tb.sanbay_di_id " +
-                "JOIN sanbay sbdn ON sbdn.sanbay_id = tb.sanbay_den_id " +
+                "JOIN sanbay sbd ON sbd.sanbay_id = tb.sanbaydi_id " +
+                "JOIN sanbay sbdn ON sbdn.sanbay_id = tb.sanbayden_id " +
                 "ORDER BY cb.chuyenbay_id DESC";
 
         List<ChuyenBayDTO> list = new ArrayList<>();

@@ -8,31 +8,24 @@ import flightbooking.dao.GheDAO;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class PnlQuanLyMayBay extends JPanel {
 
     private final MayBayBUS mayBayBUS = new MayBayBUS();
     private final GheGeneratorBUS gheGenBUS = new GheGeneratorBUS();
-    // thêm field
     private final GheDAO gheDAO = new GheDAO();
 
-
+    // Đã bỏ cột "Số tầng", chỉ còn 4 cột
     private final DefaultTableModel model = new DefaultTableModel(
-            new Object[]{"ID", "Tên máy bay", "Kiểu", "Tổng ghế", "Số tầng"}, 0
+            new Object[]{"ID", "Tên máy bay", "Kiểu", "Tổng ghế"}, 0
     ) { @Override public boolean isCellEditable(int r, int c) { return false; } };
 
     private final JTable table = new JTable(model);
 
     private final JTextField txtTen = new JTextField();
     private final JTextField txtKieu = new JTextField();
-    private final JSpinner spTongGhe = new JSpinner(new SpinnerNumberModel(0, 0, 1000, 1));
-    private final JSpinner spSoTang = new JSpinner(new SpinnerNumberModel(1, 1, 10, 1));
-
-    // tạo ghế
-    private final JTextField txtTenHang = new JTextField("Economy");
-    private final JTextField txtHangGheId = new JTextField("1"); // mock
-    private final JSpinner spSoHang = new JSpinner(new SpinnerNumberModel(6, 1, 30, 1));
-    private final JSpinner spSoCot = new JSpinner(new SpinnerNumberModel(6, 1, 20, 1));
 
     public PnlQuanLyMayBay() {
         setLayout(new BorderLayout(10,10));
@@ -48,15 +41,12 @@ public class PnlQuanLyMayBay extends JPanel {
     private JComponent buildTop() {
         JPanel wrap = new JPanel(new BorderLayout(10,10));
 
-        JPanel form = new JPanel(new GridLayout(2, 5, 10, 10));
-        form.add(new JLabel("Tên máy bay"));
+        // Đã bỏ các ô nhập Tầng và Tổng ghế, chỉnh lại Layout cho gọn
+        JPanel form = new JPanel(new GridLayout(1, 4, 10, 10));
+        form.add(new JLabel("Tên máy bay:"));
         form.add(txtTen);
-        form.add(new JLabel("Kiểu máy bay"));
+        form.add(new JLabel("Kiểu máy bay:"));
         form.add(txtKieu);
-        form.add(new JLabel("Tổng số ghế (0 = bỏ trống)"));
-        form.add(spTongGhe);
-        form.add(new JLabel("Số tầng"));
-        form.add(spSoTang);
 
         JButton btnAdd = new JButton("Thêm");
         JButton btnUpdate = new JButton("Sửa");
@@ -71,25 +61,13 @@ public class PnlQuanLyMayBay extends JPanel {
         actions.add(btnUpdate);
         actions.add(btnDelete);
 
-        JPanel gen = new JPanel(new GridLayout(2, 6, 10, 10));
-        gen.setBorder(BorderFactory.createTitledBorder("Tạo ghế theo hạng + tầng (E.A1)"));
-        gen.add(new JLabel("Tên hạng (Economy/...)"));
-        gen.add(txtTenHang);
-        gen.add(new JLabel("HangGheId (mock)"));
-        gen.add(txtHangGheId);
-        gen.add(new JLabel("Số hàng (A,B,...)"));
-        gen.add(spSoHang);
-        gen.add(new JLabel("Số cột (1..n)"));
-        gen.add(spSoCot);
-
         JButton btnGen = new JButton("Tạo ghế cho máy bay đang chọn");
-        btnGen.addActionListener(e -> genSeat());
+        btnGen.addActionListener(e -> openGenSeatDialog());
 
         JPanel genActions = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         genActions.add(btnGen);
 
         JPanel genWrap = new JPanel(new BorderLayout(10,10));
-        genWrap.add(gen, BorderLayout.CENTER);
         genWrap.add(genActions, BorderLayout.SOUTH);
 
         wrap.add(form, BorderLayout.NORTH);
@@ -101,12 +79,13 @@ public class PnlQuanLyMayBay extends JPanel {
     private void reload() {
         model.setRowCount(0);
         for (MayBayDTO m : mayBayBUS.dsMayBay()) {
+            // Hiển thị chữ "null" nếu tổng số ghế chưa có hoặc = 0
+            Object tongGhe = (m.getTongSoGhe() == null || m.getTongSoGhe() == 0) ? "null" : m.getTongSoGhe();
             model.addRow(new Object[]{
                     m.getMayBayId(),
                     m.getTenMayBay(),
                     m.getKieuMayBay(),
-                    m.getTongSoGhe(),
-                    m.getSoTang()
+                    tongGhe
             });
         }
     }
@@ -117,22 +96,16 @@ public class PnlQuanLyMayBay extends JPanel {
 
         txtTen.setText(String.valueOf(model.getValueAt(row, 1)));
         txtKieu.setText(String.valueOf(model.getValueAt(row, 2)));
-
-        Object tsg = model.getValueAt(row, 3);
-        spTongGhe.setValue(tsg == null ? 0 : Integer.parseInt(String.valueOf(tsg)));
-
-        spSoTang.setValue(Integer.parseInt(String.valueOf(model.getValueAt(row, 4))));
     }
 
     private void add() {
         MayBayDTO m = new MayBayDTO();
         m.setTenMayBay(txtTen.getText().trim());
         m.setKieuMayBay(txtKieu.getText().trim());
-
-        int tsg = (int) spTongGhe.getValue();
-        m.setTongSoGhe(tsg <= 0 ? null : tsg);
-
-        m.setSoTang((int) spSoTang.getValue());
+        
+        // Mặc định set null cho ghế khi mới thêm máy bay
+        m.setTongSoGhe(0);
+        // m.setSoTang(1); // Mở comment nếu Database của bạn vẫn bắt buộc có thuộc tính so_tang
 
         mayBayBUS.themMayBay(m);
         reload();
@@ -149,10 +122,13 @@ public class PnlQuanLyMayBay extends JPanel {
         m.setTenMayBay(txtTen.getText().trim());
         m.setKieuMayBay(txtKieu.getText().trim());
 
-        int tsg = (int) spTongGhe.getValue();
-        m.setTongSoGhe(tsg <= 0 ? null : tsg);
-
-        m.setSoTang((int) spSoTang.getValue());
+        // Lấy lại giá trị tổng số ghế từ bảng để không bị đè mất khi Update tên/kiểu
+        Object tsg = model.getValueAt(row, 3);
+        if (tsg != null && !tsg.toString().equals("null")) {
+            m.setTongSoGhe(Integer.parseInt(tsg.toString()));
+        } else {
+            m.setTongSoGhe(null);
+        }
 
         mayBayBUS.capNhatMayBay(m);
         reload();
@@ -167,7 +143,7 @@ public class PnlQuanLyMayBay extends JPanel {
         reload();
     }
 
-    private void genSeat() {
+    private void openGenSeatDialog() {
         int row = table.getSelectedRow();
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Chọn 1 máy bay trước.");
@@ -175,23 +151,148 @@ public class PnlQuanLyMayBay extends JPanel {
         }
 
         int mayBayId = Integer.parseInt(String.valueOf(model.getValueAt(row, 0)));
-        int soTang = Integer.parseInt(String.valueOf(model.getValueAt(row, 4)));
 
-        int hangGheId = Integer.parseInt(txtHangGheId.getText().trim());
-        String tenHang = txtTenHang.getText().trim();
-        int soHang = (int) spSoHang.getValue();
-        int soCot = (int) spSoCot.getValue();
-        // ✅ chặn generate nếu đã có ghế
-if (!gheDAO.findByMayBay(mayBayId).isEmpty()) {
-    JOptionPane.showMessageDialog(this,
-            "Máy bay ID=" + mayBayId + " đã có ghế trong DB.\n" +
-            "Không cho generate thêm để tránh trùng.\n" +
-            "Nếu muốn generate lại, hãy xóa ghế cũ trước.");
-    return;
-}
+        JDialog dialog = new JDialog(
+                SwingUtilities.getWindowAncestor(this),
+                "Cấu hình ghế - Máy bay ID=" + mayBayId,
+                Dialog.ModalityType.APPLICATION_MODAL
+        );
+        dialog.setSize(600, 400);
+        dialog.setLocationRelativeTo(this);
+        dialog.setLayout(new BorderLayout(10, 10));
 
-        gheGenBUS.taoGheTheoHang(mayBayId, hangGheId, tenHang, soTang, soHang, soCot);
+        HangGheItem[] danhSachHangGhe = new HangGheItem[]{
+                new HangGheItem(1, "Economy"),
+                new HangGheItem(2, "Business"),
+                new HangGheItem(3, "First Class"),
+                new HangGheItem(4, "Premium Economy")
+        };
 
-        JOptionPane.showMessageDialog(this, "Đã tạo ghế E.A1... cho máy bay ID=" + mayBayId);
+        JPanel pnlConfigList = new JPanel();
+        pnlConfigList.setLayout(new BoxLayout(pnlConfigList, BoxLayout.Y_AXIS));
+        JScrollPane scrollPane = new JScrollPane(pnlConfigList);
+        
+        JButton btnAddConfig = new JButton("+ Thêm hạng ghế");
+        List<ConfigRow> configRows = new ArrayList<>();
+
+        Runnable addRowUI = () -> {
+            JPanel rowPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
+            JComboBox<HangGheItem> cbHangGhe = new JComboBox<>(danhSachHangGhe);
+            JSpinner spSoGhe = new JSpinner(new SpinnerNumberModel(50, 1, 500, 1));
+            JSpinner spSoHang = new JSpinner(new SpinnerNumberModel(10, 1, 100, 1));
+            JButton btnRemove = new JButton("Xóa");
+            
+            rowPanel.add(new JLabel("Hạng:"));
+            rowPanel.add(cbHangGhe);
+            rowPanel.add(new JLabel("Tổng số ghế:"));
+            rowPanel.add(spSoGhe);
+            rowPanel.add(new JLabel("Số hàng:"));
+            rowPanel.add(spSoHang);
+            rowPanel.add(btnRemove);
+
+            pnlConfigList.add(rowPanel);
+            pnlConfigList.revalidate();
+            pnlConfigList.repaint();
+
+            ConfigRow configData = new ConfigRow(cbHangGhe, spSoGhe, spSoHang, rowPanel);
+            configRows.add(configData);
+
+            btnRemove.addActionListener(e -> {
+                pnlConfigList.remove(rowPanel);
+                configRows.remove(configData);
+                pnlConfigList.revalidate();
+                pnlConfigList.repaint();
+            });
+        };
+
+        addRowUI.run();
+        btnAddConfig.addActionListener(e -> addRowUI.run());
+
+        JPanel pnlTop = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        pnlTop.add(btnAddConfig);
+        pnlTop.add(new JLabel("  (Cột sẽ được tự động tính = Tổng ghế / Số hàng)"));
+
+        JButton btnOk = new JButton("Bắt đầu tạo");
+        JButton btnCancel = new JButton("Hủy");
+
+        btnOk.addActionListener(e -> {
+            try {
+                if (!gheDAO.findByMayBay(mayBayId).isEmpty()) {
+                    JOptionPane.showMessageDialog(dialog, "Máy bay đã có ghế trong Database.\nHãy xóa cũ trước khi tạo lại.");
+                    return;
+                }
+
+                if (configRows.isEmpty()) {
+                    JOptionPane.showMessageDialog(dialog, "Vui lòng thêm ít nhất 1 cấu hình hạng ghế.");
+                    return;
+                }
+
+                int tongGheDaTao = 0;
+                int rowOffset = 0;
+
+                for (ConfigRow rowData : configRows) {
+                    HangGheItem selectedHangGhe = (HangGheItem) rowData.cbHangGhe.getSelectedItem();
+                    int hangGheId = selectedHangGhe.id;
+                    String tenHang = selectedHangGhe.ten;
+                    
+                    int soGhe = (int) rowData.spSoGhe.getValue();
+                    int soHang = (int) rowData.spSoHang.getValue();
+                    int soCot = (int) Math.ceil((double) soGhe / soHang);
+
+                    gheGenBUS.taoGheTheoHang(mayBayId, hangGheId, tenHang, soHang, soCot, rowOffset);
+                    
+                    rowOffset += soHang; 
+                    tongGheDaTao += (soHang * soCot);
+                }
+
+                // Cập nhật lại số lượng ghế vào database
+                MayBayDTO mbUpdate = new MayBayDTO();
+                mbUpdate.setMayBayId(mayBayId);
+                // Giữ lại tên và kiểu (cần truy vấn lại hoặc dùng tạm dữ liệu từ bảng)
+                mbUpdate.setTenMayBay(String.valueOf(model.getValueAt(row, 1)));
+                mbUpdate.setKieuMayBay(String.valueOf(model.getValueAt(row, 2)));
+                mbUpdate.setTongSoGhe(tongGheDaTao);
+                mayBayBUS.capNhatMayBay(mbUpdate);
+
+                JOptionPane.showMessageDialog(dialog, "Thành công! Đã tự động tạo " + tongGheDaTao + " ghế.");
+                dialog.dispose();
+                reload(); // Tải lại bảng để hiển thị số lượng ghế mới
+
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(dialog, "Lỗi: " + ex.getMessage());
+                ex.printStackTrace();
+            }
+        });
+
+        btnCancel.addActionListener(e -> dialog.dispose());
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        actions.add(btnCancel); actions.add(btnOk);
+
+        dialog.add(pnlTop, BorderLayout.NORTH);
+        dialog.add(scrollPane, BorderLayout.CENTER);
+        dialog.add(actions, BorderLayout.SOUTH);
+        dialog.setVisible(true);
+    }
+
+    private static class ConfigRow {
+        JComboBox<HangGheItem> cbHangGhe;
+        JSpinner spSoGhe, spSoHang;
+        JPanel panel;
+
+        public ConfigRow(JComboBox<HangGheItem> cbHangGhe, JSpinner spSoGhe, JSpinner spSoHang, JPanel panel) {
+            this.cbHangGhe = cbHangGhe;
+            this.spSoGhe = spSoGhe;
+            this.spSoHang = spSoHang;
+            this.panel = panel;
+        }
+    }
+
+    private static class HangGheItem {
+        int id; String ten;
+        public HangGheItem(int id, String ten) {
+            this.id = id; this.ten = ten;
+        }
+        @Override
+        public String toString() { return ten; }
     }
 }

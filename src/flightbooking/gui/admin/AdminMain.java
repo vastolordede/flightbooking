@@ -2,6 +2,7 @@ package flightbooking.gui.admin;
 
 import javax.swing.*;
 
+
 public class AdminMain {
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {

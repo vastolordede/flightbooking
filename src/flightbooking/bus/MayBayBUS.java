@@ -37,9 +37,9 @@ public class MayBayBUS {
             throw new RuntimeException("Tên máy bay không được rỗng");
         if (m.getKieuMayBay() == null || m.getKieuMayBay().trim().isEmpty())
             throw new RuntimeException("Kiểu máy bay không được rỗng");
-        if (m.getSoTang() != null && m.getSoTang() <= 0)
-            throw new RuntimeException("Số tầng phải >= 1");
-        if (m.getTongSoGhe() != null && m.getTongSoGhe() <= 0)
-            throw new RuntimeException("Tổng số ghế phải > 0 (hoặc để trống)");
+        // if (m.getSoTang() != null && m.getSoTang() <= 0)
+        //     throw new RuntimeException("Số tầng phải >= 1");
+        // if (m.getTongSoGhe() != null && m.getTongSoGhe() <= 0)
+        //     throw new RuntimeException("Tổng số ghế phải > 0 (hoặc để trống)");
     }
 }
