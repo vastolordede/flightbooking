@@ -2,6 +2,7 @@ package flightbooking.dao;
 
 import flightbooking.dto.GiaGheOverrideDTO;
 
+import java.math.BigDecimal;
 import java.sql.*;
 
 public class GiaGheOverrideDAO extends BaseDAO {
@@ -39,4 +40,44 @@ if (t != null) d.setCapNhatLuc(t.toLocalDateTime());
             throw new RuntimeException("giagheoverride findByChuyenBayAndGhe failed", e);
         }
     }
+    public BigDecimal findPrice(int chuyenBayId, int gheId){
+
+    String sql = "select giaoverride from giagheoverride where chuyenbay_id=? and ghe_id=? limit 1";
+
+    try(Connection c = getConnection();
+        PreparedStatement ps = c.prepareStatement(sql)){
+
+        ps.setInt(1,chuyenBayId);
+        ps.setInt(2,gheId);
+
+        try(ResultSet rs = ps.executeQuery()){
+
+            if(rs.next())
+                return rs.getBigDecimal("giaoverride");
+
+        }
+
+    }catch(Exception e){
+        throw new RuntimeException(e);
+    }
+
+    return null;
+}
+public void insert(int chuyenBayId,int gheId,BigDecimal price){
+
+    String sql = "insert into giagheoverride(chuyenbay_id,ghe_id,giaoverride) values (?,?,?)";
+
+    try(Connection c = getConnection();
+        PreparedStatement ps = c.prepareStatement(sql)){
+
+        ps.setInt(1,chuyenBayId);
+        ps.setInt(2,gheId);
+        ps.setBigDecimal(3,price);
+
+        ps.executeUpdate();
+
+    }catch(Exception e){
+        throw new RuntimeException(e);
+    }
+}
 }

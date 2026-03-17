@@ -161,11 +161,12 @@ public class PnlQuanLyMayBay extends JPanel {
         dialog.setLocationRelativeTo(this);
         dialog.setLayout(new BorderLayout(10, 10));
 
+        // Sắp xếp lại thứ tự xuất hiện trong danh sách chọn (không đổi ID, chỉ đổi thứ tự)
         HangGheItem[] danhSachHangGhe = new HangGheItem[]{
-                new HangGheItem(1, "Economy"),
-                new HangGheItem(2, "Business"),
-                new HangGheItem(3, "First Class"),
-                new HangGheItem(4, "Premium Economy")
+            new HangGheItem(3, "First Class"),     // Đưa lên đầu
+            new HangGheItem(2, "Business"), 
+            new HangGheItem(4, "Premium Economy"),
+            new HangGheItem(1, "Economy")          // Đưa xuống cuối
         };
 
         JPanel pnlConfigList = new JPanel();
@@ -239,7 +240,14 @@ public class PnlQuanLyMayBay extends JPanel {
                     int soHang = (int) rowData.spSoHang.getValue();
                     int soCot = (int) Math.ceil((double) soGhe / soHang);
 
-                    gheGenBUS.taoGheTheoHang(mayBayId, hangGheId, tenHang, soHang, soCot, rowOffset);
+                    gheGenBUS.taoGheTheoHang(
+        mayBayId,
+        hangGheId,
+        tenHang,
+        soGhe,
+        soHang,
+        rowOffset
+);
                     
                     rowOffset += soHang; 
                     tongGheDaTao += (soHang * soCot);

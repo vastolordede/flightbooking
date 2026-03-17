@@ -9,6 +9,8 @@ public class GheDTO {
     private Integer trangThai;
 
     private boolean daDat;
+    private Integer rowIndex;
+private Integer colIndex;
 
     public int getGheId() { return gheId; }
     public void setGheId(int gheId) { this.gheId = gheId; }
@@ -30,4 +32,9 @@ public class GheDTO {
 
     public boolean isDaDat() { return daDat; }
     public void setDaDat(boolean daDat) { this.daDat = daDat; }
+    public Integer getRowIndex() { return rowIndex; }
+public void setRowIndex(Integer rowIndex) { this.rowIndex = rowIndex; }
+
+public Integer getColIndex() { return colIndex; }
+public void setColIndex(Integer colIndex) { this.colIndex = colIndex; }
 }

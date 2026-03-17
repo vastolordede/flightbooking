@@ -92,16 +92,10 @@ public class DatVeBUS {
     ) {
         if (items == null || items.isEmpty()) throw new RuntimeException("Danh sach hanh khach/ghe rong");
 
-        // ====== STUB MODE: tạm thời không ghi DB (MOCK mua vé thành công) ======
-        KetQuaDatVe kq = new KetQuaDatVe();
-        kq.setHoaDonId(0);
-        kq.setVeIds(new ArrayList<>());
-        kq.setThanhToanId(0);
-        kq.setTongTien(BigDecimal.ZERO);
-        return kq;
+        
 
-        /*
-        ===================== CODE DB THẬT (TẠM THỜI TẮT) =====================
+        
+        
 
         // 1) kiểm tra ghế trùng/đã đặt
         Set<Integer> unique = new HashSet<>();
@@ -173,8 +167,7 @@ public class DatVeBUS {
         kq2.setTongTien(tong);
         return kq2;
 
-        =====================================================================
-        */
+        
     }
 
     // ====== DTO phụ cho BUS ======

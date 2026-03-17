@@ -55,4 +55,5 @@ public class FrmNguoiDung extends JFrame {
         bar.add(left, BorderLayout.WEST);
         return bar;
     }
+    
 }

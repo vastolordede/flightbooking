@@ -1,44 +1,40 @@
 package flightbooking.gui.admin;
 
+import flightbooking.bus.AccountBUS;
+import flightbooking.dto.AccountDTO;
 import flightbooking.util.SessionContext;
-
 import javax.swing.*;
 import java.awt.*;
-import java.util.Arrays;
-import java.util.List;
 
 public class FrmDangNhapNhanVien extends JFrame {
 
-    private final JComboBox<UserItem> cbUser = new JComboBox<>();
+    // Thay JComboBox bằng JTextField để nhân viên tự nhập
+    private final JTextField txtTenDangNhap = new JTextField();
     private final JPasswordField txtMatKhau = new JPasswordField();
-
-    // ✅ mock accounts
-    private final List<UserItem> MOCK = Arrays.asList(
-            new UserItem(1, "admin", "123", "Admin quầy"),
-            new UserItem(2, "staff01", "123", "Nhân viên 01"),
-            new UserItem(3, "staff02", "123", "Nhân viên 02")
-    );
+    
+    // Gọi lớp BUS bạn vừa hoàn thiện
+    private final AccountBUS accountBus = new AccountBUS();
 
     public FrmDangNhapNhanVien() {
-        setTitle("Đăng nhập nhân viên (Mock)");
-        setSize(460, 230);
+        setTitle("Đăng nhập hệ thống quản trị");
+        setSize(400, 230);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
-        JPanel root = new JPanel(new BorderLayout(10,10));
-        root.setBorder(BorderFactory.createEmptyBorder(12,12,12,12));
+        JPanel root = new JPanel(new BorderLayout(15, 15));
+        root.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        JPanel form = new JPanel(new GridLayout(2,2,10,10));
-        form.add(new JLabel("Tài khoản"));
-        form.add(cbUser);
-        form.add(new JLabel("Mật khẩu"));
+        JPanel form = new JPanel(new GridLayout(2, 2, 10, 10));
+        form.add(new JLabel("Tên đăng nhập:"));
+        form.add(txtTenDangNhap);
+        form.add(new JLabel("Mật khẩu:"));
         form.add(txtMatKhau);
 
-        for (UserItem u : MOCK) cbUser.addItem(u);
-
-        JButton btnLogin = new JButton("Đăng nhập");
+        JButton btnLogin = new JButton("Đăng nhập hệ thống");
+        btnLogin.setFont(new Font("SansSerif", Font.BOLD, 14));
         btnLogin.addActionListener(e -> doLogin());
 
+        root.add(new JLabel("HỆ THỐNG QUẢN TRỊ FLIGHTBOOKING", JLabel.CENTER), BorderLayout.NORTH);
         root.add(form, BorderLayout.CENTER);
         root.add(btnLogin, BorderLayout.SOUTH);
 
@@ -46,35 +42,30 @@ public class FrmDangNhapNhanVien extends JFrame {
     }
 
     private void doLogin() {
-        UserItem u = (UserItem) cbUser.getSelectedItem();
+        String u = txtTenDangNhap.getText().trim();
         String p = new String(txtMatKhau.getPassword());
 
-        if (u == null) return;
-        if (!u.pass.equals(p)) {
-            JOptionPane.showMessageDialog(this, "Sai mật khẩu. (hint: 123)");
+        // 1. Kiểm tra rỗng qua BUS
+        String validateMsg = accountBus.validateLogin(u, p);
+        if (validateMsg != null) {
+            JOptionPane.showMessageDialog(this, validateMsg);
             return;
         }
 
-        SessionContext.loginMock(u.id, u.displayName);
-        dispose();
-        new FrmQuanTri().setVisible(true);
-    }
+        // 2. Kiểm tra tài khoản thật từ Database
+        AccountDTO account = accountBus.checkLogin(u, p);
 
-    private static class UserItem {
-        final int id;
-        final String username;
-        final String pass;
-        final String displayName;
-
-        UserItem(int id, String username, String pass, String displayName) {
-            this.id = id;
-            this.username = username;
-            this.pass = pass;
-            this.displayName = displayName;
-        }
-
-        @Override public String toString() {
-            return displayName + " • " + username + " (ID=" + id + ")";
+        if (account != null) {
+            // Lưu Session: Bạn có thể lưu tên đăng nhập hoặc ID nhân viên
+            SessionContext.setUserDemo(account.getTenDangNhap()); 
+            
+            JOptionPane.showMessageDialog(this, "Đăng nhập thành công! Chào mừng Quản trị viên.");
+            dispose();
+            
+            // Mở màn hình quản trị chính
+            new FrmQuanTri().setVisible(true); 
+        } else {
+            JOptionPane.showMessageDialog(this, "Tài khoản không tồn tại hoặc sai mật khẩu!");
         }
     }
 }

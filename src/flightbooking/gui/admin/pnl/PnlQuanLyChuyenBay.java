@@ -3,7 +3,9 @@ package flightbooking.gui.admin.pnl;
 import flightbooking.bus.ChuyenBayBUS;
 import flightbooking.bus.MayBayBUS;
 import flightbooking.bus.TuyenBayBUS;
+import flightbooking.dao.GiaHangChuyenBayDAO;
 import flightbooking.dto.ChuyenBayDTO;
+import flightbooking.dto.GiaHangChuyenBayDTO;
 import flightbooking.dto.MayBayDTO;
 import flightbooking.dto.TuyenBayDTO;
 
@@ -80,10 +82,16 @@ public class PnlQuanLyChuyenBay extends JPanel {
         JButton btnAdd = new JButton("Thêm");
         JButton btnUpdate = new JButton("Sửa");
         JButton btnDelete = new JButton("Xóa");
+        JButton btnSeatMap = new JButton("Sơ đồ ghế");
 
         btnAdd.addActionListener(e -> add());
         btnUpdate.addActionListener(e -> update());
         btnDelete.addActionListener(e -> delete());
+        btnSeatMap.addActionListener(e -> openSeatMap());
+
+        JButton btnGiaHang = new JButton("Giá hạng ghế");
+
+btnGiaHang.addActionListener(e -> openGiaHangDialog());
 
         JPanel wrap = new JPanel(new BorderLayout(10, 10));
         wrap.add(form, BorderLayout.CENTER);
@@ -92,6 +100,9 @@ public class PnlQuanLyChuyenBay extends JPanel {
         actions.add(btnAdd);
         actions.add(btnUpdate);
         actions.add(btnDelete);
+        actions.add(btnGiaHang);
+        actions.add(btnSeatMap);
+        
 
         wrap.add(actions, BorderLayout.SOUTH);
         return wrap;
@@ -260,4 +271,158 @@ public class PnlQuanLyChuyenBay extends JPanel {
         MayBayItem(int id, String text) { this.id = id; this.text = text; }
         @Override public String toString() { return text; }
     }
+    private void openGiaHangDialog() {
+    int row = table.getSelectedRow();
+    if (row < 0) {
+        JOptionPane.showMessageDialog(this, "Chọn chuyến bay trước.");
+        return;
+    }
+    int chuyenBayId = (Integer) model.getValueAt(row, 0);
+
+    JDialog dialog = new JDialog(
+            SwingUtilities.getWindowAncestor(this),
+            "Thiết lập giá hạng ghế - CB#" + chuyenBayId,
+            Dialog.ModalityType.APPLICATION_MODAL
+    );
+    dialog.setSize(500, 300);
+    dialog.setLocationRelativeTo(this);
+    dialog.setLayout(new BorderLayout(10, 10));
+
+    // Thêm cột Tên Hạng Ghế (Cột 0 và 1 sẽ khóa không cho sửa)
+    DefaultTableModel m = new DefaultTableModel(
+            new Object[]{"ID", "Tên Hạng Ghế", "Giá cơ bản", "Thuế"}, 0
+    ) {
+        @Override
+        public boolean isCellEditable(int r, int c) {
+            return c == 2 || c == 3; // Chỉ cho sửa cột Giá và Thuế
+        }
+    };
+    JTable tbl = new JTable(m);
+
+    // Mảng chứa các hạng ghế theo thứ tự ID
+    Object[][] danhSachHangGhe = {
+        {3, "First Class", 4500000, 0},
+        {2, "Business", 2500000, 0},
+        {4, "Premium Economy", 1800000, 0},
+        {1, "Economy", 1200000, 0}
+    };
+
+    GiaHangChuyenBayDAO dao = new GiaHangChuyenBayDAO();
+
+    // KIỂM TRA DỮ LIỆU CŨ TRONG DATABASE: Nếu đã có, lấy giá cũ lên
+    try {
+        List<GiaHangChuyenBayDTO> giaDaLuu = dao.findByChuyenBay(chuyenBayId);
+        
+        for (Object[] hg : danhSachHangGhe) {
+            int hangGheId = (Integer) hg[0];
+            String tenHang = (String) hg[1];
+            long giaHienTai = ((Number) hg[2]).longValue(); // Giá mặc định ban đầu
+            long thueHienTai = ((Number) hg[3]).longValue(); // Thuế mặc định ban đầu
+            
+            // Tìm trong list xem đã lưu chưa
+            if (giaDaLuu != null) {
+                for (GiaHangChuyenBayDTO daLuu : giaDaLuu) {
+                    if (daLuu.getHangGheId() == hangGheId) {
+                        giaHienTai = daLuu.getGiaCoBan().longValue();
+                        thueHienTai = daLuu.getThuePhi() != null ? daLuu.getThuePhi().longValue() : 0;
+                        break;
+                    }
+                }
+            }
+            m.addRow(new Object[]{hangGheId, tenHang, giaHienTai, thueHienTai});
+        }
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(this, "Không thể tải giá cũ: " + e.getMessage());
+        return; // Dừng luôn không mở Dialog
+    }
+
+    JButton btnSave = new JButton("Lưu Thiết Lập Giá");
+
+    btnSave.addActionListener(e -> {
+        // QUAN TRỌNG: Ngừng việc gõ chữ trên ô JTable
+        if (tbl.isEditing()) {
+            tbl.getCellEditor().stopCellEditing();
+        }
+
+        try {
+            for (int i = 0; i < m.getRowCount(); i++) {
+                int hangGheId = Integer.parseInt(m.getValueAt(i, 0).toString());
+                
+                // Xử lý giá trị bị nhập rỗng hoặc null, và loại bỏ ký tự trắng
+                String strGia = m.getValueAt(i, 2) == null ? "0" : m.getValueAt(i, 2).toString().trim();
+                String strThue = m.getValueAt(i, 3) == null ? "0" : m.getValueAt(i, 3).toString().trim();
+
+                // Chống gõ linh tinh
+                if(strGia.isEmpty()) strGia = "0";
+                if(strThue.isEmpty()) strThue = "0";
+
+                java.math.BigDecimal gia = new java.math.BigDecimal(strGia);
+                java.math.BigDecimal thue = new java.math.BigDecimal(strThue);
+
+                GiaHangChuyenBayDTO d = new GiaHangChuyenBayDTO();
+                d.setChuyenBayId(chuyenBayId);
+                d.setHangGheId(hangGheId);
+                d.setGiaCoBan(gia);
+                d.setThuePhi(thue);
+
+                // INSERT HAY UPDATE?
+                GiaHangChuyenBayDTO old = dao.findByChuyenBayAndHangGhe(chuyenBayId, hangGheId);
+                if (old == null) dao.insert(d);
+                else dao.update(d);
+            }
+
+            JOptionPane.showMessageDialog(dialog, "Đã lưu giá thành công cho chuyến bay " + chuyenBayId);
+            dialog.dispose();
+
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(dialog, "Lỗi nhập liệu: Giá và Thuế phải là số nguyên (Không chứa dấu phẩy hay chữ).", "Lỗi", JOptionPane.ERROR_MESSAGE);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(dialog, "Lỗi hệ thống: " + ex.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
+        }
+    });
+
+    dialog.add(new JScrollPane(tbl), BorderLayout.CENTER);
+    dialog.add(btnSave, BorderLayout.SOUTH);
+    dialog.setVisible(true);
+}
+private void openSeatMap() {
+    int row = table.getSelectedRow();
+
+    if (row < 0) {
+        JOptionPane.showMessageDialog(this, "Chọn chuyến bay trước.");
+        return;
+    }
+
+    int chuyenBayId = (Integer) model.getValueAt(row, 0);
+    ChuyenBayDTO dto = chuyenBayBUS.findById(chuyenBayId);
+    
+    if (dto == null || dto.getMayBayId() == null) {
+        JOptionPane.showMessageDialog(this, "Chuyến bay chưa gán máy bay.");
+        return;
+    }
+
+    int mayBayId = dto.getMayBayId();
+
+    JDialog d = new JDialog(
+            SwingUtilities.getWindowAncestor(this),
+            "Sơ đồ ghế - Chuyến bay #" + chuyenBayId,
+            Dialog.ModalityType.APPLICATION_MODAL
+    );
+
+    // --- PHẦN CHỈNH SỬA ĐỂ FULL MÀN HÌNH ---
+    // Lấy kích thước màn hình (trừ đi thanh Taskbar)
+    Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+    d.setSize(screenSize.width, screenSize.height);
+    
+    // Đặt vị trí ở góc trên cùng bên trái
+    d.setLocation(0, 0);
+    
+    // Cho phép người dùng thay đổi kích thước/thu nhỏ nếu muốn
+    d.setResizable(true); 
+    // ---------------------------------------
+
+    d.add(new SeatMapPanel(chuyenBayId, mayBayId));
+
+    d.setVisible(true);
+}
 }
