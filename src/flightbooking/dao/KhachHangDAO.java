@@ -9,49 +9,62 @@ public class KhachHangDAO extends BaseDAO {
 
     // ================= MAP RESULTSET =================
     private KhachHangDTO map(ResultSet rs) throws SQLException {
-        KhachHangDTO kh = new KhachHangDTO();
-        kh.setHanhkhachId(rs.getInt("hanhkhach_id"));
-        kh.setHoTen(rs.getString("hoten"));
-        kh.setDienThoai(rs.getString("dienthoai"));
-        kh.setTenDangNhap(rs.getString("tendangnhap"));
-        kh.setMatKhauMaHoa(rs.getString("matkhau_mahoa"));
-        kh.setDangHoatDong(rs.getBoolean("danghoatdong"));
-        return kh;
-    }
+    KhachHangDTO kh = new KhachHangDTO();
 
-    // ================= KIỂM TRA TÀI KHOẢN ĐÃ TỒN TẠI =================
-    public boolean existsByUsername(String tenDangNhap) {
-        String sql = "SELECT 1 FROM taikhoankhachhang WHERE LOWER(tendangnhap) = LOWER(?)";
+    // ❌ KHÔNG còn hanhkhach_id trong query
+    kh.setKhachHangId(0); // hoặc -1
+
+    // ❌ KHÔNG có hoten
+    kh.setHoTen(""); // hoặc null
+
+    // ✔️ có trong bảng
+    kh.setDienThoai(rs.getString("dienthoai"));
+    kh.setTenDangNhap(rs.getString("email"));
+    kh.setMatKhauMaHoa(rs.getString("matkhau_mahoa"));
+    kh.setDangHoatDong(rs.getInt("trangthai") == 1);
+
+    return kh;
+}
+
+    // ================= CHECK USER EXISTS =================
+    public boolean existsByUsername(String email) {
+        String sql = "SELECT 1 FROM taikhoankhachhang WHERE LOWER(email) = LOWER(?)";
+
         try (Connection c = getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
-            ps.setString(1, tenDangNhap.trim());
+
+            ps.setString(1, email.trim());
+
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next();
             }
+
         } catch (SQLException e) {
             throw new RuntimeException("khachhang existsByUsername failed", e);
         }
     }
 
-    // ================= ĐĂNG KÝ KHÁCH HÀNG =================
-    public boolean register(String hoTen, String sdt, String user, String pass) {
-        // Kiểm tra tài khoản đã tồn tại
-        if (existsByUsername(user)) {
-            return false;
-        }
+    // ================= REGISTER =================
+    public boolean register(String hoTen, String sdt, String email, String pass) {
 
-        String sqlInsertKH = "INSERT INTO hanhkhach(hoten, dienthoai) VALUES(?, ?) RETURNING hanhkhach_id";
-        String sqlInsertTK = "INSERT INTO taikhoankhachhang(hanhkhach_id, tendangnhap, matkhau_mahoa, danghoatdong) VALUES(?, ?, ?, ?)";
+        if (existsByUsername(email)) return false;
+
+        String sqlInsertKH =
+                "INSERT INTO hanhkhach(hoten, dienthoai) VALUES(?, ?) RETURNING hanhkhach_id";
+
+        String sqlInsertTK =
+                "INSERT INTO taikhoankhachhang(email, dienthoai, matkhau_mahoa, trangthai) VALUES(?, ?, ?, ?)";
 
         try (Connection c = getConnection()) {
-            c.setAutoCommit(false); // Bắt đầu transaction
+            c.setAutoCommit(false);
 
             int hanhkhachId = -1;
 
-            // 1. Insert vào bảng hanhkhach
+            // 1. insert hanhkhach
             try (PreparedStatement ps = c.prepareStatement(sqlInsertKH)) {
                 ps.setString(1, hoTen.trim());
                 ps.setString(2, sdt.trim());
+
                 try (ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) {
                         hanhkhachId = rs.getInt(1);
@@ -64,12 +77,14 @@ public class KhachHangDAO extends BaseDAO {
                 return false;
             }
 
-            // 2. Insert vào bảng taikhoankhachhang
+            // 2. insert taikhoan (KHÔNG dùng hanhkhach_id vì DB bạn không có FK)
             try (PreparedStatement ps = c.prepareStatement(sqlInsertTK)) {
-                ps.setInt(1, hanhkhachId);
-                ps.setString(2, user.trim());
-                ps.setString(3, pass); // Trong thực tế nên mã hóa password
-                ps.setBoolean(4, true); // dangHoatDong = true
+
+                ps.setString(1, email.trim());
+                ps.setString(2, sdt.trim());
+                ps.setString(3, pass);
+                ps.setInt(4, 1); // trangthai = 1
+
                 int rows = ps.executeUpdate();
 
                 if (rows > 0) {
@@ -86,87 +101,108 @@ public class KhachHangDAO extends BaseDAO {
         }
     }
 
-    // ================= KIỂM TRA ĐĂNG NHẬP =================
-    public boolean checkLogin(String user, String pass) {
+    // ================= LOGIN =================
+    public boolean checkLogin(String email, String pass) {
+
         String sql = "SELECT 1 FROM taikhoankhachhang " +
-                     "WHERE LOWER(tendangnhap) = LOWER(?) " +
-                     "AND matkhau_mahoa = ? " +
-                     "AND danghoatdong = true";
+                "WHERE LOWER(email) = LOWER(?) " +
+                "AND matkhau_mahoa = ? " +
+                "AND trangthai = 1";
+
         try (Connection c = getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
-            ps.setString(1, user.trim());
+
+            ps.setString(1, email.trim());
             ps.setString(2, pass);
+
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next();
             }
+
         } catch (SQLException e) {
             throw new RuntimeException("khachhang checkLogin failed", e);
         }
     }
 
-    // ================= LẤY THÔNG TIN KHÁCH HÀNG THEO USERNAME =================
-    public KhachHangDTO findByUsername(String tenDangNhap) {
-        String sql = "SELECT kh.hanhkhach_id, kh.hoten, kh.dienthoai, " +
-                     "tk.tendangnhap, tk.matkhau_mahoa, tk.danghoatdong " +
-                     "FROM hanhkhach kh " +
-                     "INNER JOIN taikhoankhachhang tk ON tk.hanhkhach_id = kh.hanhkhach_id " +
-                     "WHERE LOWER(tk.tendangnhap) = LOWER(?)";
-        try (Connection c = getConnection();
-             PreparedStatement ps = c.prepareStatement(sql)) {
-            ps.setString(1, tenDangNhap.trim());
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return map(rs);
-                }
+    // ================= FIND BY EMAIL =================
+    public KhachHangDTO findByUsername(String email) {
+
+    String sql =
+        "SELECT email, dienthoai, matkhau_mahoa, trangthai " +
+        "FROM taikhoankhachhang " +
+        "WHERE LOWER(email) = LOWER(?)";
+
+    try (Connection c = getConnection();
+         PreparedStatement ps = c.prepareStatement(sql)) {
+
+        ps.setString(1, email.trim());
+
+        try (ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                return map(rs); // ✅ giờ không crash nữa
             }
-        } catch (SQLException e) {
-            throw new RuntimeException("khachhang findByUsername failed", e);
         }
-        return null;
+
+    } catch (SQLException e) {
+        throw new RuntimeException("khachhang findByUsername failed", e);
     }
 
-    // ================= LẤY THÔNG TIN KHÁCH HÀNG THEO ID =================
+    return null;
+}
+
+    // ================= FIND BY ID =================
     public KhachHangDTO findById(int hanhkhachId) {
-        String sql = "SELECT kh.hanhkhach_id, kh.hoten, kh.dienthoai, " +
-                     "tk.tendangnhap, tk.matkhau_mahoa, tk.danghoatdong " +
-                     "FROM hanhkhach kh " +
-                     "INNER JOIN taikhoankhachhang tk ON tk.hanhkhach_id = kh.hanhkhach_id " +
-                     "WHERE kh.hanhkhach_id = ?";
+
+        String sql =
+                "SELECT kh.hanhkhach_id, kh.hoten, kh.dienthoai, " +
+                "tk.email, tk.matkhau_mahoa, tk.trangthai " +
+                "FROM hanhkhach kh " +
+                "JOIN taikhoankhachhang tk ON tk.dienthoai = kh.dienthoai " +
+                "WHERE kh.hanhkhach_id = ?";
+
         try (Connection c = getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
+
             ps.setInt(1, hanhkhachId);
+
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     return map(rs);
                 }
             }
+
         } catch (SQLException e) {
             throw new RuntimeException("khachhang findById failed", e);
         }
+
         return null;
     }
+
+    // ================= FIND ALL =================
     public List<KhachHangDTO> findAll() {
-    String sql = "SELECT kh.hanhkhach_id, kh.hoten, kh.dienthoai, " +
-                 "tk.tendangnhap, tk.matkhau_mahoa, tk.danghoatdong " +
-                 "FROM hanhkhach kh " +
-                 "INNER JOIN taikhoankhachhang tk ON tk.hanhkhach_id = kh.hanhkhach_id " +
-                 "WHERE tk.danghoatdong = true " +
-                 "ORDER BY kh.hanhkhach_id DESC";
-    
-    List<KhachHangDTO> list = new ArrayList<>();
-    
-    try (Connection c = getConnection();
-         PreparedStatement ps = c.prepareStatement(sql);
-         ResultSet rs = ps.executeQuery()) {
-        
-        while (rs.next()) {
-            list.add(map(rs));
+
+        String sql =
+                "SELECT kh.hanhkhach_id, kh.hoten, kh.dienthoai, " +
+                "tk.email, tk.matkhau_mahoa, tk.trangthai " +
+                "FROM hanhkhach kh " +
+                "JOIN taikhoankhachhang tk ON tk.dienthoai = kh.dienthoai " +
+                "WHERE tk.trangthai = 1 " +
+                "ORDER BY kh.hanhkhach_id DESC";
+
+        List<KhachHangDTO> list = new ArrayList<>();
+
+        try (Connection c = getConnection();
+             PreparedStatement ps = c.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                list.add(map(rs));
+            }
+
+        } catch (SQLException e) {
+            throw new RuntimeException("khachhang findAll failed", e);
         }
-        
-    } catch (SQLException e) {
-        throw new RuntimeException("khachhang findAll failed", e);
+
+        return list;
     }
-    
-    return list;
-}
 }

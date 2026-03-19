@@ -3,13 +3,19 @@ package flightbooking.gui.admin.pnl;
 import flightbooking.bus.ChucVuBUS;
 import flightbooking.bus.NhanVienBUS;
 import flightbooking.bus.PhongBanBUS;
+import flightbooking.dao.QuyenDAO;
 import flightbooking.dto.ChucVuDTO;
 import flightbooking.dto.NhanVienDTO;
 import flightbooking.dto.PhongBanDTO;
+import flightbooking.dto.QuyenDTO;
+
 import java.awt.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 
@@ -18,6 +24,7 @@ public class PnlQuanLyNhanVien extends JPanel {
     private final NhanVienBUS nhanVienBUS = new NhanVienBUS();
     private final PhongBanBUS phongBanBUS = new PhongBanBUS();
     private final ChucVuBUS chucVuBUS = new ChucVuBUS();
+    // private final QuyenDAO quyenDAO = new QuyenDAO();
 
     private final DefaultTableModel model = new DefaultTableModel(
         new Object[]{
@@ -30,10 +37,11 @@ public class PnlQuanLyNhanVien extends JPanel {
                 "Ngày vào làm",
                 "Trạng thái",
                 "Ngày nghỉ",
-                "Lương cơ bản",
+                "Lương cơ bản"
         }, 0
     ) {
-        @Override public boolean isCellEditable(int r, int c) { return false; }
+        @Override
+        public boolean isCellEditable(int r, int c) { return false; }
     };
 
     private final JTable table = new JTable(model);
@@ -50,35 +58,42 @@ public class PnlQuanLyNhanVien extends JPanel {
     private final JComboBox<String> cbTrangThai =
             new JComboBox<>(new String[]{"1 - Đang làm", "0 - Nghỉ việc"});
 
+    private final JTextField txtQuyen = new JTextField();
+    private final JButton btnPhanQuyen = new JButton("Phân quyền");
+
     public PnlQuanLyNhanVien() {
 
-    setLayout(new BorderLayout(10,10));
-    setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
+        setLayout(new BorderLayout(10,10));
+        setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
 
-    add(buildForm(), BorderLayout.NORTH);
-    add(new JScrollPane(table), BorderLayout.CENTER);
+        add(buildForm(), BorderLayout.NORTH);
+        add(new JScrollPane(table), BorderLayout.CENTER);
 
-    table.setRowHeight(25);
-    table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        table.setRowHeight(25);
+        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        cbTrangThai.setEnabled(false);
+        txtQuyen.setEditable(false);
 
-    try {
-        loadPhongBan();
-        loadChucVu();
-        reload();
-    } catch (Exception e) {
-        e.printStackTrace();   // in lỗi ra terminal
-    }
+        btnPhanQuyen.addActionListener(e -> openPermissionDialog());
 
-    table.getSelectionModel().addListSelectionListener(e -> {
-        if (!e.getValueIsAdjusting()) {
-            fillForm();
+        try {
+            loadPhongBan();
+            loadChucVu();
+            reload();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-    });
-}
+
+        table.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                fillForm();
+            }
+        });
+    }
 
     private JPanel buildForm() {
 
-        JPanel form = new JPanel(new GridLayout(3,4,10,10));
+        JPanel form = new JPanel(new GridLayout(4,4,10,10));
 
         form.add(new JLabel("Họ tên"));
         form.add(txtHoTen);
@@ -107,18 +122,27 @@ public class PnlQuanLyNhanVien extends JPanel {
         form.add(new JLabel("Trạng thái"));
         form.add(cbTrangThai);
 
+        form.add(new JLabel("Quyền"));
+        form.add(buildPermissionBox());
+
         JButton btnAdd = new JButton("Thêm");
         JButton btnUpdate = new JButton("Sửa");
         JButton btnDelete = new JButton("Xóa");
+        JButton btnClear = new JButton("Làm mới");
 
         btnAdd.addActionListener(e -> add());
         btnUpdate.addActionListener(e -> update());
         btnDelete.addActionListener(e -> delete());
+        btnClear.addActionListener(e -> {
+            table.clearSelection();
+            clearForm();
+        });
 
         JPanel wrap = new JPanel(new BorderLayout(10,10));
         wrap.add(form, BorderLayout.CENTER);
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        actions.add(btnClear);
         actions.add(btnAdd);
         actions.add(btnUpdate);
         actions.add(btnDelete);
@@ -126,6 +150,13 @@ public class PnlQuanLyNhanVien extends JPanel {
         wrap.add(actions, BorderLayout.SOUTH);
 
         return wrap;
+    }
+
+    private JPanel buildPermissionBox() {
+        JPanel p = new JPanel(new BorderLayout(5, 0));
+        p.add(txtQuyen, BorderLayout.CENTER);
+        p.add(btnPhanQuyen, BorderLayout.EAST);
+        return p;
     }
 
     // ================= LOAD DATA =================
@@ -164,7 +195,6 @@ public class PnlQuanLyNhanVien extends JPanel {
         }
     }
 
-
     private void clearForm() {
         txtHoTen.setText("");
         txtEmail.setText("");
@@ -172,9 +202,13 @@ public class PnlQuanLyNhanVien extends JPanel {
         txtLuong.setText("");
         txtNgayVaolam.setText("");
         txtNgayNghi.setText("");
-        cbPhongBan.setSelectedIndex(0);
-        cbChucVu.setSelectedIndex(0);
+        txtQuyen.setText("");
+
+        if (cbPhongBan.getItemCount() > 0) cbPhongBan.setSelectedIndex(0);
+        if (cbChucVu.getItemCount() > 0) cbChucVu.setSelectedIndex(0);
+
         cbTrangThai.setSelectedIndex(0);
+        cbTrangThai.setEnabled(false);
     }
 
     private void fillForm() {
@@ -197,16 +231,38 @@ public class PnlQuanLyNhanVien extends JPanel {
         selectComboById(cbChucVu, nv.getChucVuId());
 
         cbTrangThai.setSelectedIndex(nv.getTrangThai() == 1 ? 0 : 1);
+        cbTrangThai.setEnabled(true);
+        
+        loadPermissionSummary(id);
     }
+
 
     // ================= CRUD =================
 
     private void add() {
         try {
             NhanVienDTO nv = getFormData(null);
-            nhanVienBUS.themNhanVien(nv);
+
+            String username = txtEmail.getText().trim();
+            String password = "123456";
+
+            int nhomQuyenId = 0; // không dùng nhóm quyền ở đây nữa
+
+            nhanVienBUS.themNhanVienVaTaiKhoan(
+                    nv,
+                    username,
+                    password,
+                    nhomQuyenId
+            );
+
             reload();
             clearForm();
+
+            JOptionPane.showMessageDialog(
+                this,
+                "Thêm nhân viên + tạo tài khoản thành công!\nChọn nhân viên trong bảng rồi bấm 'Phân quyền' để cấp quyền."
+            );
+
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage());
         }
@@ -214,7 +270,10 @@ public class PnlQuanLyNhanVien extends JPanel {
 
     private void update() {
         int row = table.getSelectedRow();
-        if (row < 0) return;
+        if (row < 0) {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn nhân viên cần sửa.");
+            return;
+        }
 
         try {
             int id = Integer.parseInt(String.valueOf(model.getValueAt(row, 0)));
@@ -222,6 +281,8 @@ public class PnlQuanLyNhanVien extends JPanel {
             nhanVienBUS.suaNhanVien(nv);
             reload();
             clearForm();
+            table.clearSelection();
+            JOptionPane.showMessageDialog(this, "Cập nhật nhân viên thành công!");
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage());
         }
@@ -243,7 +304,130 @@ public class PnlQuanLyNhanVien extends JPanel {
         int id = Integer.parseInt(String.valueOf(model.getValueAt(row, 0)));
         nhanVienBUS.xoaNhanVien(id);
         reload();
+        clearForm();
+        table.clearSelection();
     }
+
+    // ================= PHÂN QUYỀN =================
+
+    private void openPermissionDialog() {
+    int row = table.getSelectedRow();
+    if (row < 0) {
+        JOptionPane.showMessageDialog(this, "Vui lòng chọn nhân viên trước.");
+        return;
+    }
+
+    int nhanVienId = Integer.parseInt(String.valueOf(model.getValueAt(row, 0)));
+
+    List<flightbooking.dto.NhomQuyenDTO> dsNhomQuyen =
+            new flightbooking.dao.NhomQuyenDAO().findAll();
+
+    if (dsNhomQuyen == null || dsNhomQuyen.isEmpty()) {
+        JOptionPane.showMessageDialog(this, "Chưa có nhóm quyền nào.");
+        return;
+    }
+
+    Integer currentNhomQuyenId = nhanVienBUS.getNhomQuyenIdByNhanVien(nhanVienId);
+    boolean firstTime = (currentNhomQuyenId == null || currentNhomQuyenId <= 0);
+
+    JDialog dialog = new JDialog(
+            (Frame) SwingUtilities.getWindowAncestor(this),
+            "Phân quyền cho nhân viên ID " + nhanVienId,
+            true
+    );
+    dialog.setSize(420, 260);
+    dialog.setLocationRelativeTo(this);
+    dialog.setLayout(new BorderLayout(10, 10));
+
+    DefaultComboBoxModel<NhomQuyenItem> cbModel = new DefaultComboBoxModel<>();
+    JComboBox<NhomQuyenItem> cbNhomQuyen = new JComboBox<>(cbModel);
+
+    for (flightbooking.dto.NhomQuyenDTO nq : dsNhomQuyen) {
+        cbModel.addElement(new NhomQuyenItem(
+                nq.getNhomQuyenId(),
+                nq.getTenNhomQuyen()
+        ));
+    }
+
+    if (currentNhomQuyenId != null) {
+        for (int i = 0; i < cbModel.getSize(); i++) {
+            NhomQuyenItem item = cbModel.getElementAt(i);
+            if (item.id == currentNhomQuyenId) {
+                cbNhomQuyen.setSelectedIndex(i);
+                break;
+            }
+        }
+    }
+
+    JPanel center = new JPanel(new GridLayout(2, 1, 10, 10));
+    center.setBorder(BorderFactory.createEmptyBorder(20, 20, 10, 20));
+    center.add(new JLabel("Chọn nhóm quyền"));
+    center.add(cbNhomQuyen);
+
+    JButton btnSave = new JButton("Lưu");
+    JButton btnUpdate = new JButton("Cập nhật");
+    JButton btnClose = new JButton("Đóng");
+
+    btnSave.setEnabled(firstTime);
+    btnUpdate.setEnabled(!firstTime);
+
+    btnSave.addActionListener(e -> {
+        try {
+            NhomQuyenItem selected = (NhomQuyenItem) cbNhomQuyen.getSelectedItem();
+            if (selected == null) {
+                throw new RuntimeException("Vui lòng chọn nhóm quyền.");
+            }
+
+            nhanVienBUS.saveNhomQuyenForNhanVien(nhanVienId, selected.id);
+            txtQuyen.setText(selected.text);
+
+            JOptionPane.showMessageDialog(dialog, "Lưu nhóm quyền thành công!");
+            dialog.dispose();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(dialog, ex.getMessage());
+        }
+    });
+
+    btnUpdate.addActionListener(e -> {
+        try {
+            NhomQuyenItem selected = (NhomQuyenItem) cbNhomQuyen.getSelectedItem();
+            if (selected == null) {
+                throw new RuntimeException("Vui lòng chọn nhóm quyền.");
+            }
+
+            nhanVienBUS.updateNhomQuyenForNhanVien(nhanVienId, selected.id);
+            txtQuyen.setText(selected.text);
+
+            JOptionPane.showMessageDialog(dialog, "Cập nhật nhóm quyền thành công!");
+            dialog.dispose();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(dialog, ex.getMessage());
+        }
+    });
+
+    btnClose.addActionListener(e -> dialog.dispose());
+
+    JPanel south = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+    south.add(btnSave);
+    south.add(btnUpdate);
+    south.add(btnClose);
+
+    JLabel lblHint = new JLabel(
+            firstTime
+                    ? "Nhân viên này chưa có nhóm quyền. Dùng nút Lưu."
+                    : "Nhân viên này đã có nhóm quyền. Dùng nút Cập nhật."
+    );
+    lblHint.setBorder(BorderFactory.createEmptyBorder(10, 20, 0, 20));
+
+    dialog.add(lblHint, BorderLayout.NORTH);
+    dialog.add(center, BorderLayout.CENTER);
+    dialog.add(south, BorderLayout.SOUTH);
+
+    dialog.setVisible(true);
+}
+
 
     // ================= HELPER =================
 
@@ -260,7 +444,7 @@ public class PnlQuanLyNhanVien extends JPanel {
         nv.setEmail(txtEmail.getText().trim());
         if (nv.getEmail().isEmpty())
             throw new RuntimeException("Email không được để trống.");
-        
+
         nv.setDienThoai(txtDienThoai.getText().trim());
         if (nv.getDienThoai().isEmpty())
             throw new RuntimeException("Số điện thoại không được để trống.");
@@ -277,14 +461,16 @@ public class PnlQuanLyNhanVien extends JPanel {
             throw new RuntimeException("Ngày vào sai định dạng yyyy-MM-dd.");
         }
 
-            String ngayNghiText = txtNgayNghi.getText().trim();
-            if (!ngayNghiText.isEmpty()) {
-                try {
-                    nv.setNgayNghi(LocalDate.parse(ngayNghiText));
-                } catch (Exception e) {
-                    throw new RuntimeException("Ngày nghỉ sai định dạng yyyy-MM-dd.");
-                }
+        String ngayNghiText = txtNgayNghi.getText().trim();
+        if (!ngayNghiText.isEmpty()) {
+            try {
+                nv.setNgayNghi(LocalDate.parse(ngayNghiText));
+            } catch (Exception e) {
+                throw new RuntimeException("Ngày nghỉ sai định dạng yyyy-MM-dd.");
             }
+        } else {
+            nv.setNgayNghi(null);
+        }
 
         Item pb = (Item) cbPhongBan.getSelectedItem();
         Item cv = (Item) cbChucVu.getSelectedItem();
@@ -292,7 +478,11 @@ public class PnlQuanLyNhanVien extends JPanel {
         if (pb != null) nv.setPhongBanId(pb.id);
         if (cv != null) nv.setChucVuId(cv.id);
 
-        nv.setTrangThai(cbTrangThai.getSelectedIndex() == 0 ? 1 : 0);
+        if (id == null) {
+            nv.setTrangThai(1);
+        } else {
+            nv.setTrangThai(cbTrangThai.getSelectedIndex() == 0 ? 1 : 0);
+        }
 
         return nv;
     }
@@ -322,4 +512,46 @@ public class PnlQuanLyNhanVien extends JPanel {
             return text;
         }
     }
+
+    private static class NhomQuyenItem {
+    final int id;
+    final String text;
+
+    NhomQuyenItem(int id, String text) {
+        this.id = id;
+        this.text = text;
+    }
+
+    @Override
+    public String toString() {
+        return text;
+    }
+}
+
+private void loadPermissionSummary(int nhanVienId) {
+    try {
+        Integer nhomQuyenId = nhanVienBUS.getNhomQuyenIdByNhanVien(nhanVienId);
+
+        if (nhomQuyenId == null || nhomQuyenId <= 0) {
+            txtQuyen.setText("Chưa phân quyền");
+            return;
+        }
+
+        List<flightbooking.dto.NhomQuyenDTO> dsNhomQuyen =
+                new flightbooking.dao.NhomQuyenDAO().findAll();
+
+        for (flightbooking.dto.NhomQuyenDTO nq : dsNhomQuyen) {
+            if (nq.getNhomQuyenId() == nhomQuyenId) {
+                txtQuyen.setText(nq.getTenNhomQuyen());
+                return;
+            }
+        }
+
+        txtQuyen.setText("Nhóm quyền #" + nhomQuyenId);
+
+    } catch (Exception e) {
+        txtQuyen.setText("Không tải được nhóm quyền");
+    }
+}
+
 }

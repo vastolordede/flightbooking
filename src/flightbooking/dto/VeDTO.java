@@ -88,4 +88,13 @@ public class VeDTO {
     public void setThoiDiemTao(LocalDateTime thoiDiemTao) {
         this.thoiDiemTao = thoiDiemTao;
     }
+    private String tenNhanVien;
+
+public String getTenNhanVien() {
+    return tenNhanVien;
+}
+
+public void setTenNhanVien(String tenNhanVien) {
+    this.tenNhanVien = tenNhanVien;
+}
 }

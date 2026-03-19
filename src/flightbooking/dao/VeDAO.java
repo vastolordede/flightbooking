@@ -72,4 +72,50 @@ else
             throw new RuntimeException("ve insert failed", e);
         }
     }
+    public List<VeDTO> findWithNhanVien(int chuyenBayId) {
+    String sql =
+            "select v.ve_id, v.chuyenbay_id, v.ghe_id, v.hanhkhach_id, " +
+            "v.giachot, v.thuechot, v.trangthai, " +
+            "nv.nhanvien_id, nv.hoten as ten_nhan_vien " +
+            "from ve v " +
+            "left join hoadonve hdv on hdv.ve_id = v.ve_id " +
+            "left join hoadon hd on hd.hoadon_id = hdv.hoadon_id " +
+            "left join nhanvien nv on nv.nhanvien_id = hd.taikhoannhanvien_id " +
+            "where v.chuyenbay_id = ? " +
+            "order by v.ve_id";
+
+    List<VeDTO> list = new ArrayList<>();
+
+    try (Connection c = getConnection();
+         PreparedStatement ps = c.prepareStatement(sql)) {
+
+        ps.setInt(1, chuyenBayId);
+
+        try (ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                VeDTO v = new VeDTO();
+
+                v.setVeId(rs.getInt("ve_id"));
+                v.setChuyenBayId(rs.getInt("chuyenbay_id"));
+                v.setGheId(rs.getInt("ghe_id"));
+                v.setHanhKhachId(rs.getInt("hanhkhach_id"));
+                v.setGiaChot(rs.getBigDecimal("giachot"));
+                v.setThueChot(rs.getBigDecimal("thuechot"));
+                v.setTrangThai(rs.getInt("trangthai"));
+
+                // 👉 thêm field hiển thị (optional)
+                try {
+                    v.setTenNhanVien(rs.getString("ten_nhan_vien"));
+                } catch (Exception ignored) {}
+
+                list.add(v);
+            }
+        }
+
+    } catch (SQLException e) {
+        throw new RuntimeException("ve findWithNhanVien failed", e);
+    }
+
+    return list;
+}
 }

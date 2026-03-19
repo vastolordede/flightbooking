@@ -94,7 +94,14 @@ public class DatVeBUS {
 
         
 
-        
+        // trước khi tạo hóa đơn
+if (taiKhoanKhachHangId == null && taiKhoanNhanVienId == null) {
+    throw new RuntimeException("Phải có người đặt (khách hàng hoặc nhân viên)");
+}
+
+if (taiKhoanKhachHangId != null && taiKhoanNhanVienId != null) {
+    throw new RuntimeException("Chỉ được 1 trong 2: khách hàng hoặc nhân viên");
+}
         
 
         // 1) kiểm tra ghế trùng/đã đặt
@@ -185,7 +192,7 @@ public class DatVeBUS {
     public static class KetQuaDatVe {
         private int hoaDonId;
         private List<Integer> veIds;
-        private int thanhToanId;
+        private int thanhToanId;    
         private BigDecimal tongTien;
 
         public int getHoaDonId() { return hoaDonId; }

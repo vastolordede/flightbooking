@@ -1,8 +1,10 @@
 package flightbooking.bus;
 
+import flightbooking.dao.AccountDAO;
 import flightbooking.dao.ChucVuDAO;
 import flightbooking.dao.NhanVienDAO;
 import flightbooking.dao.PhongBanDAO;
+import flightbooking.dto.AccountDTO;
 import flightbooking.dto.NhanVienDTO;
 import java.math.BigDecimal;
 import java.util.List;
@@ -60,14 +62,27 @@ public class NhanVienBUS {
     // ====================== XOÁ MỀM ======================
     public void xoaNhanVien(int id) {
 
-        if (id <= 0)
-            throw new RuntimeException("ID không hợp lệ!");
+    if (id <= 0)
+        throw new RuntimeException("ID không hợp lệ!");
 
-        if (nhanVienDAO.findById(id) == null)
-            throw new RuntimeException("Nhân viên không tồn tại!");
+    if (nhanVienDAO.findById(id) == null)
+        throw new RuntimeException("Nhân viên không tồn tại!");
 
-        nhanVienDAO.softDelete(id);
-    }
+    // nghỉ việc
+    nhanVienDAO.softDelete(id);
+
+    // khóa account
+    new AccountDAO().disableByNhanVienId(id);
+}
+public void khoiPhucNhanVien(int id) {
+
+    if (id <= 0)
+        throw new RuntimeException("ID không hợp lệ!");
+
+    nhanVienDAO.restore(id);
+
+    new AccountDAO().enableByNhanVienId(id);
+}
 
     // ====================== VALIDATION CHUNG ======================
     private void validateNhanVien(NhanVienDTO nv, boolean isUpdate) {
@@ -139,4 +154,111 @@ public class NhanVienBUS {
             }
         }
     }
+public void themNhanVienVaTaiKhoan(
+        NhanVienDTO nv,
+        String username,
+        String password,
+        int nhomQuyenId
+) {
+
+    validateNhanVien(nv, false);
+
+    AccountDAO accountDAO = new AccountDAO();
+
+    // 🔥 1. check username tồn tại
+    if (accountDAO.getAccountByUsername(username) != null) {
+        throw new RuntimeException("Username đã tồn tại!");
+    }
+
+    // 🔥 2. tạo nhân viên
+    int nvId = nhanVienDAO.insert(nv);
+
+    if (nvId <= 0) {
+        throw new RuntimeException("Tạo nhân viên thất bại");
+    }
+
+    // 🔥 3. tạo account
+    AccountDTO acc = new AccountDTO();
+    acc.setNhanVienId(nvId);
+    acc.setTenDangNhap(username);
+    acc.setMatKhauMaHoa(password);
+    acc.setNhomQuyenId(nhomQuyenId);
+    acc.setDangHoatDong(true);
+
+    boolean ok = accountDAO.insertAccount(acc);
+
+    // 🔥 4. nếu fail → rollback thủ công (xóa nv vừa tạo)
+    if (!ok) {
+        nhanVienDAO.softDelete(nvId); // fallback
+        throw new RuntimeException("Tạo tài khoản thất bại");
+    }
+    
+}
+
+public List<Integer> getPermissionIdsByNhanVien(int nhanVienId) {
+    if (nhanVienId <= 0) {
+        throw new RuntimeException("ID nhân viên không hợp lệ!");
+    }
+    return nhanVienDAO.getPermissionIdsByNhanVien(nhanVienId);
+}
+
+public void savePermissionsForNhanVien(int nhanVienId, List<Integer> permissionIds) {
+    if (nhanVienId <= 0) {
+        throw new RuntimeException("ID nhân viên không hợp lệ!");
+    }
+
+    if (nhanVienDAO.findById(nhanVienId) == null) {
+        throw new RuntimeException("Nhân viên không tồn tại!");
+    }
+
+    nhanVienDAO.savePermissionsForNhanVien(nhanVienId, permissionIds);
+}
+
+public void updatePermissionsForNhanVien(int nhanVienId, List<Integer> permissionIds) {
+    if (nhanVienId <= 0) {
+        throw new RuntimeException("ID nhân viên không hợp lệ!");
+    }
+
+    if (nhanVienDAO.findById(nhanVienId) == null) {
+        throw new RuntimeException("Nhân viên không tồn tại!");
+    }
+
+    nhanVienDAO.updatePermissionsForNhanVien(nhanVienId, permissionIds);
+}
+
+public Integer getNhomQuyenIdByNhanVien(int nhanVienId) {
+    if (nhanVienId <= 0) {
+        throw new RuntimeException("ID nhân viên không hợp lệ!");
+    }
+    return nhanVienDAO.getNhomQuyenIdByNhanVien(nhanVienId);
+}
+
+public void saveNhomQuyenForNhanVien(int nhanVienId, int nhomQuyenId) {
+    if (nhanVienId <= 0) {
+        throw new RuntimeException("ID nhân viên không hợp lệ!");
+    }
+    if (nhomQuyenId <= 0) {
+        throw new RuntimeException("Nhóm quyền không hợp lệ!");
+    }
+    if (nhanVienDAO.findById(nhanVienId) == null) {
+        throw new RuntimeException("Nhân viên không tồn tại!");
+    }
+
+    nhanVienDAO.saveNhomQuyenForNhanVien(nhanVienId, nhomQuyenId);
+}
+
+public void updateNhomQuyenForNhanVien(int nhanVienId, int nhomQuyenId) {
+    if (nhanVienId <= 0) {
+        throw new RuntimeException("ID nhân viên không hợp lệ!");
+    }
+    if (nhomQuyenId <= 0) {
+        throw new RuntimeException("Nhóm quyền không hợp lệ!");
+    }
+    if (nhanVienDAO.findById(nhanVienId) == null) {
+        throw new RuntimeException("Nhân viên không tồn tại!");
+    }
+
+    nhanVienDAO.updateNhomQuyenForNhanVien(nhanVienId, nhomQuyenId);
+}
+
 }

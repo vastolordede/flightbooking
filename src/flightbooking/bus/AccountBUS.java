@@ -26,18 +26,20 @@ public class AccountBUS {
      * Kiểm tra đăng nhập thật sự từ Database
      */
     public AccountDTO checkLogin(String tenDangNhap, String matKhau) {
-        // Gọi DAO lấy tài khoản dựa trên TenDangNhap trong ERD
-        AccountDTO account = accountDao.getAccountByUsername(tenDangNhap);
 
-        // Kiểm tra: Tài khoản tồn tại + Mật khẩu khớp + Tài khoản đang hoạt động
-        if (account != null 
-            && account.getMatKhauMaHoa().equals(matKhau) 
+    AccountDTO account = accountDao.getAccountByUsername(tenDangNhap);
+
+    if (account != null
+            && account.getMatKhauMaHoa().equals(matKhau)
             && account.isDangHoatDong()) {
-            return account; 
-        }
+
         
-        return null; // Sai tên, sai mật khẩu hoặc tài khoản bị khóa
+
+        return account;
     }
+
+    return null;
+}
     
     public AccountDTO checkLoginAdmin(String u, String p) {
     AccountDTO acc = checkLogin(u, p);

@@ -4,6 +4,7 @@ import flightbooking.bus.DatVeBUS;
 import flightbooking.dto.HanhKhachDTO;
 import flightbooking.gui.user.common.AppNavigator;
 import flightbooking.gui.user.theme.UserTheme;
+import flightbooking.util.SessionContext;
 
 import javax.swing.*;
 import java.awt.*;
@@ -98,13 +99,15 @@ public class PnlXacNhanDatVe extends JPanel {
             List<DatVeBUS.ThongTinHanhKhachVaGhe> items = new ArrayList<>();
             items.add(it);
 
-            datVeBUS.datVe(
-                    null,          // taiKhoanKhachHangId (nếu có login thì truyền)
-                    null,          // taiKhoanNhanVienId (online thường null)
-                    chuyenBayId,
-                    items,
-                    "online"
-            );
+            Integer khachHangId = SessionContext.getCurrentUserId();
+
+datVeBUS.datVe(
+        khachHangId,   // ✅ user đang login
+        null,          // ✅ không có nhân viên
+        chuyenBayId,
+        items,
+        "online"
+);
 
             JOptionPane.showMessageDialog(this, "Đặt vé thành công!");
             // reset chọn ghế để lần sau không dính

@@ -267,4 +267,246 @@ public class NhanVienDAO extends BaseDAO {
             throw new RuntimeException("nhanvien restore failed", e);
         }
     }
+
+    // ================= LẤY NHÓM QUYỀN CỦA NHÂN VIÊN =================
+public Integer getNhomQuyenIdByNhanVien(int nhanVienId) {
+    String sql = "SELECT nhomquyen_id FROM taikhoannhanvien WHERE nhanvien_id = ?";
+
+    try (Connection c = getConnection();
+         PreparedStatement ps = c.prepareStatement(sql)) {
+
+        ps.setInt(1, nhanVienId);
+
+        try (ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                int id = rs.getInt("nhomquyen_id");
+                return rs.wasNull() ? null : id;
+            }
+        }
+
+    } catch (SQLException e) {
+        throw new RuntimeException("getNhomQuyenIdByNhanVien failed", e);
+    }
+
+    return null;
+}
+
+public void saveNhomQuyenForNhanVien(int nhanVienId, int nhomQuyenId) {
+    String sql = "UPDATE taikhoannhanvien SET nhomquyen_id = ? WHERE nhanvien_id = ? AND (nhomquyen_id IS NULL OR nhomquyen_id = 0)";
+
+    try (Connection c = getConnection();
+         PreparedStatement ps = c.prepareStatement(sql)) {
+
+        ps.setInt(1, nhomQuyenId);
+        ps.setInt(2, nhanVienId);
+
+        int rows = ps.executeUpdate();
+        if (rows == 0) {
+            throw new RuntimeException("Nhân viên đã có nhóm quyền hoặc không tìm thấy tài khoản.");
+        }
+
+    } catch (SQLException e) {
+        throw new RuntimeException("saveNhomQuyenForNhanVien failed", e);
+    }
+}
+
+public void updateNhomQuyenForNhanVien(int nhanVienId, int nhomQuyenId) {
+    String sql = "UPDATE taikhoannhanvien SET nhomquyen_id = ? WHERE nhanvien_id = ?";
+
+    try (Connection c = getConnection();
+         PreparedStatement ps = c.prepareStatement(sql)) {
+
+        ps.setInt(1, nhomQuyenId);
+        ps.setInt(2, nhanVienId);
+
+        int rows = ps.executeUpdate();
+        if (rows == 0) {
+            throw new RuntimeException("Không tìm thấy tài khoản của nhân viên.");
+        }
+
+    } catch (SQLException e) {
+        throw new RuntimeException("updateNhomQuyenForNhanVien failed", e);
+    }
+}
+
+// ================= LẤY DANH SÁCH QUYỀN THEO NHÂN VIÊN =================
+public List<Integer> getPermissionIdsByNhanVien(int nhanVienId) {
+    Integer nhomQuyenId = getNhomQuyenIdByNhanVien(nhanVienId);
+
+    if (nhomQuyenId == null || nhomQuyenId <= 0) {
+        return new ArrayList<>();
+    }
+
+    String sql =
+        "SELECT quyen_id " +
+        "FROM nhomquyen_quyen " +
+        "WHERE nhomquyen_id = ? " +
+        "ORDER BY quyen_id";
+
+    List<Integer> list = new ArrayList<>();
+
+    try (Connection c = getConnection();
+         PreparedStatement ps = c.prepareStatement(sql)) {
+
+        ps.setInt(1, nhomQuyenId);
+
+        try (ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                list.add(rs.getInt("quyen_id"));
+            }
+        }
+
+    } catch (SQLException e) {
+        throw new RuntimeException("getPermissionIdsByNhanVien failed", e);
+    }
+
+    return list;
+}
+
+// ================= TẠO NHÓM QUYỀN RIÊNG CHO NHÂN VIÊN =================
+private int createPrivateNhomQuyen(Connection c, int nhanVienId) throws SQLException {
+    String getNameSql = "SELECT hoten FROM nhanvien WHERE nhanvien_id = ?";
+    String tenNhanVien = "NV_" + nhanVienId;
+
+    try (PreparedStatement ps = c.prepareStatement(getNameSql)) {
+        ps.setInt(1, nhanVienId);
+        try (ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                String hoten = rs.getString("hoten");
+                if (hoten != null && !hoten.trim().isEmpty()) {
+                    tenNhanVien = hoten.trim();
+                }
+            }
+        }
+    }
+
+    String insertNhomSql =
+        "INSERT INTO nhomquyen(tennhomquyen) VALUES (?) RETURNING nhomquyen_id";
+
+    String tenNhom = "ROLE_NV_" + nhanVienId + "_" + tenNhanVien;
+
+    try (PreparedStatement ps = c.prepareStatement(insertNhomSql)) {
+        ps.setString(1, tenNhom);
+
+        try (ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        }
+    }
+
+    throw new RuntimeException("Không tạo được nhóm quyền riêng cho nhân viên");
+}
+
+// ================= GÁN NHÓM QUYỀN CHO TÀI KHOẢN =================
+private void assignNhomQuyenToNhanVienAccount(Connection c, int nhanVienId, int nhomQuyenId) throws SQLException {
+    String sql = "UPDATE taikhoannhanvien SET nhomquyen_id = ? WHERE nhanvien_id = ?";
+
+    try (PreparedStatement ps = c.prepareStatement(sql)) {
+        ps.setInt(1, nhomQuyenId);
+        ps.setInt(2, nhanVienId);
+
+        int rows = ps.executeUpdate();
+        if (rows == 0) {
+            throw new RuntimeException("Không tìm thấy tài khoản của nhân viên để gán nhóm quyền");
+        }
+    }
+}
+
+// ================= XÓA HẾT QUYỀN CŨ CỦA NHÓM =================
+private void clearPermissionsOfNhom(Connection c, int nhomQuyenId) throws SQLException {
+    String sql = "DELETE FROM nhomquyen_quyen WHERE nhomquyen_id = ?";
+
+    try (PreparedStatement ps = c.prepareStatement(sql)) {
+        ps.setInt(1, nhomQuyenId);
+        ps.executeUpdate();
+    }
+}
+
+// ================= THÊM QUYỀN VÀO NHÓM =================
+private void insertPermissionsToNhom(Connection c, int nhomQuyenId, List<Integer> permissionIds) throws SQLException {
+    if (permissionIds == null || permissionIds.isEmpty()) return;
+
+    String sql = "INSERT INTO nhomquyen_quyen(nhomquyen_id, quyen_id) VALUES (?, ?)";
+
+    try (PreparedStatement ps = c.prepareStatement(sql)) {
+        for (Integer quyenId : permissionIds) {
+            if (quyenId == null || quyenId <= 0) continue;
+
+            ps.setInt(1, nhomQuyenId);
+            ps.setInt(2, quyenId);
+            ps.addBatch();
+        }
+        ps.executeBatch();
+    }
+}
+
+// ================= LƯU QUYỀN LẦN ĐẦU CHO NHÂN VIÊN =================
+public void savePermissionsForNhanVien(int nhanVienId, List<Integer> permissionIds) {
+    try (Connection c = getConnection()) {
+        c.setAutoCommit(false);
+
+        try {
+            Integer currentNhomQuyenId = getNhomQuyenIdByNhanVien(nhanVienId);
+
+            if (currentNhomQuyenId != null && currentNhomQuyenId > 0) {
+                List<Integer> currentPermissions = getPermissionIdsByNhanVien(nhanVienId);
+                if (currentPermissions != null && !currentPermissions.isEmpty()) {
+                    throw new RuntimeException("Nhân viên đã có quyền, hãy dùng cập nhật.");
+                }
+            }
+
+            int nhomQuyenId;
+            if (currentNhomQuyenId == null || currentNhomQuyenId <= 0) {
+                nhomQuyenId = createPrivateNhomQuyen(c, nhanVienId);
+                assignNhomQuyenToNhanVienAccount(c, nhanVienId, nhomQuyenId);
+            } else {
+                nhomQuyenId = currentNhomQuyenId;
+            }
+
+            clearPermissionsOfNhom(c, nhomQuyenId);
+            insertPermissionsToNhom(c, nhomQuyenId, permissionIds);
+
+            c.commit();
+
+        } catch (Exception ex) {
+            c.rollback();
+            throw ex;
+        } finally {
+            c.setAutoCommit(true);
+        }
+
+    } catch (SQLException e) {
+        throw new RuntimeException("savePermissionsForNhanVien failed", e);
+    }
+}
+
+// ================= CẬP NHẬT QUYỀN CHO NHÂN VIÊN =================
+public void updatePermissionsForNhanVien(int nhanVienId, List<Integer> permissionIds) {
+    try (Connection c = getConnection()) {
+        c.setAutoCommit(false);
+
+        try {
+            Integer nhomQuyenId = getNhomQuyenIdByNhanVien(nhanVienId);
+
+            if (nhomQuyenId == null || nhomQuyenId <= 0) {
+                throw new RuntimeException("Nhân viên chưa có nhóm quyền để cập nhật. Hãy dùng Lưu lần đầu.");
+            }
+
+            clearPermissionsOfNhom(c, nhomQuyenId);
+            insertPermissionsToNhom(c, nhomQuyenId, permissionIds);
+
+            c.commit();
+
+        } catch (Exception ex) {
+            c.rollback();
+            throw ex;
+        } finally {
+            c.setAutoCommit(true);
+        }
+
+    } catch (SQLException e) {
+        throw new RuntimeException("updatePermissionsForNhanVien failed", e);
+    }
+}
 }
