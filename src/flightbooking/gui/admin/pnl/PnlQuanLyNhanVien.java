@@ -8,6 +8,7 @@ import flightbooking.dto.ChucVuDTO;
 import flightbooking.dto.NhanVienDTO;
 import flightbooking.dto.PhongBanDTO;
 import flightbooking.dto.QuyenDTO;
+import flightbooking.util.ActionConstants;
 
 import java.awt.*;
 import java.math.BigDecimal;
@@ -45,6 +46,11 @@ public class PnlQuanLyNhanVien extends JPanel {
     };
 
     private final JTable table = new JTable(model);
+
+    private JButton btnAdd;
+    private JButton btnUpdate;
+    private JButton btnDelete;
+    private JButton btnClear;
 
     private final JTextField txtHoTen = new JTextField();
     private final JTextField txtEmail = new JTextField();
@@ -125,10 +131,10 @@ public class PnlQuanLyNhanVien extends JPanel {
         form.add(new JLabel("Quyền"));
         form.add(buildPermissionBox());
 
-        JButton btnAdd = new JButton("Thêm");
-        JButton btnUpdate = new JButton("Sửa");
-        JButton btnDelete = new JButton("Xóa");
-        JButton btnClear = new JButton("Làm mới");
+        btnAdd = new JButton("Thêm");
+        btnUpdate = new JButton("Sửa");
+        btnDelete = new JButton("Xóa");
+        btnClear = new JButton("Làm mới");
 
         btnAdd.addActionListener(e -> add());
         btnUpdate.addActionListener(e -> update());
@@ -554,4 +560,12 @@ private void loadPermissionSummary(int nhanVienId) {
     }
 }
 
+public void applyPermissions(List<Integer> actionIds) {
+    btnAdd.setVisible(actionIds.contains(ActionConstants.THEM));
+    btnUpdate.setVisible(actionIds.contains(ActionConstants.SUA));
+    btnDelete.setVisible(actionIds.contains(ActionConstants.XOA));
+    btnClear.setVisible(actionIds.contains(ActionConstants.LAM_MOI));
+    btnPhanQuyen.setVisible(actionIds.contains(ActionConstants.PHAN_QUYEN));
+    revalidate(); repaint();
+}
 }

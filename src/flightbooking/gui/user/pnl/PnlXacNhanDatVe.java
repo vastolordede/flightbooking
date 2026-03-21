@@ -48,19 +48,23 @@ public class PnlXacNhanDatVe extends JPanel {
     }
 
     private void refreshSummary() {
-        String gheText = (PnlChonGhe.GHE_TEXT_DA_CHON != null && !PnlChonGhe.GHE_TEXT_DA_CHON.isBlank())
-                ? PnlChonGhe.GHE_TEXT_DA_CHON
-                : (PnlChonGhe.GHE_ID_DA_CHON != null ? ("GheID=" + PnlChonGhe.GHE_ID_DA_CHON) : "(chưa chọn)");
+    String gheText;
 
-        summary.setText(
-                "Tóm tắt đặt vé\n\n" +
-                        "Chuyến bay ID: " + PnlKetQuaChuyenBay.CHUYEN_BAY_ID_CHON + "\n" +
-                        "Ghế: " + gheText + "\n" +
-                        "Họ tên: " + PnlThongTinHanhKhach.HO_TEN + "\n" +
-                        "Số giấy tờ: " + PnlThongTinHanhKhach.SO_GIAY_TO + "\n\n" +
-                        "Bấm 'Hoàn tất' để tạo vé."
-        );
+    if (PnlChonGhe.GHE_IDS_DA_CHON != null && !PnlChonGhe.GHE_IDS_DA_CHON.isEmpty()) {
+        gheText = PnlChonGhe.GHE_IDS_DA_CHON.toString();
+    } else {
+        gheText = "(chưa chọn)";
     }
+
+    summary.setText(
+            "Tóm tắt đặt vé\n\n" +
+            "Chuyến bay ID: " + PnlKetQuaChuyenBay.CHUYEN_BAY_ID_CHON + "\n" +
+            "Ghế: " + gheText + "\n" +
+            "Họ tên: " + PnlThongTinHanhKhach.HO_TEN + "\n" +
+            "Số giấy tờ: " + PnlThongTinHanhKhach.SO_GIAY_TO + "\n\n" +
+            "Bấm 'Hoàn tất' để tạo vé."
+    );
+}
 
     private JComponent buildActions() {
         JPanel p = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -77,48 +81,54 @@ public class PnlXacNhanDatVe extends JPanel {
         return p;
     }
 
-    private void datVe() {
-        try {
-            int chuyenBayId = PnlKetQuaChuyenBay.CHUYEN_BAY_ID_CHON;
+   private void datVe() {
+    try {
+        int chuyenBayId = PnlKetQuaChuyenBay.CHUYEN_BAY_ID_CHON;
 
-            Integer gheIdObj = PnlChonGhe.GHE_ID_DA_CHON;
-            if (gheIdObj == null || gheIdObj <= 0) {
-                throw new RuntimeException("Bạn chưa chọn ghế hợp lệ.");
-            }
-            int gheId = gheIdObj;
+        // ✅ check có chọn ghế chưa
+        if (PnlChonGhe.GHE_IDS_DA_CHON == null || PnlChonGhe.GHE_IDS_DA_CHON.isEmpty()) {
+            throw new RuntimeException("Bạn chưa chọn ghế.");
+        }
 
-            DatVeBUS.ThongTinHanhKhachVaGhe it = new DatVeBUS.ThongTinHanhKhachVaGhe();
+        List<DatVeBUS.ThongTinHanhKhachVaGhe> items = new ArrayList<>();
 
+        for (Integer gheId : PnlChonGhe.GHE_IDS_DA_CHON) {
             HanhKhachDTO hk = new HanhKhachDTO();
             hk.setHoTen(PnlThongTinHanhKhach.HO_TEN);
             hk.setSoGiayTo(PnlThongTinHanhKhach.SO_GIAY_TO);
 
+            DatVeBUS.ThongTinHanhKhachVaGhe it = new DatVeBUS.ThongTinHanhKhachVaGhe();
             it.setHanhKhach(hk);
             it.setGheId(gheId);
 
-            List<DatVeBUS.ThongTinHanhKhachVaGhe> items = new ArrayList<>();
             items.add(it);
-
-            Integer khachHangId = SessionContext.getCurrentUserId();
-
-datVeBUS.datVe(
-        khachHangId,   // ✅ user đang login
-        null,          // ✅ không có nhân viên
-        chuyenBayId,
-        items,
-        "online"
-);
-
-            JOptionPane.showMessageDialog(this, "Đặt vé thành công!");
-            // reset chọn ghế để lần sau không dính
-            PnlChonGhe.GHE_ID_DA_CHON = null;
-            PnlChonGhe.GHE_TEXT_DA_CHON = "";
-
-            nav.show("TIM_CHUYEN");
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Đặt vé thất bại: " + ex.getMessage());
         }
+
+        Integer khachHangId = SessionContext.getCurrentUserId();
+
+        if (khachHangId == null) {
+    throw new RuntimeException("Bạn chưa đăng nhập.");
+}
+
+        datVeBUS.datVe(
+                khachHangId,
+                null,
+                chuyenBayId,
+                items,
+                "online"
+        );
+
+        JOptionPane.showMessageDialog(this, "Đặt vé thành công!");
+
+        // ✅ reset multi ghế
+        PnlChonGhe.GHE_IDS_DA_CHON.clear();
+
+        nav.show("TIM_CHUYEN");
+
+    } catch (Exception ex) {
+        JOptionPane.showMessageDialog(this, "Đặt vé thất bại: " + ex.getMessage());
     }
+}
 
     private JButton primaryButton(String text) {
         JButton b = new JButton(text);

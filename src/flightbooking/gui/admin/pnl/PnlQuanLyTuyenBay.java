@@ -4,6 +4,7 @@ import flightbooking.bus.SanBayBUS;
 import flightbooking.bus.TuyenBayBUS;
 import flightbooking.dto.SanBayDTO;
 import flightbooking.dto.TuyenBayDTO;
+import flightbooking.util.ActionConstants;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -14,6 +15,10 @@ public class PnlQuanLyTuyenBay extends JPanel {
 
     private final TuyenBayBUS tuyenBayBUS = new TuyenBayBUS();
     private final SanBayBUS sanBayBUS = new SanBayBUS();
+
+    private JButton btnAdd;
+    private JButton btnUpdate;
+    private JButton btnDelete;
 
     private final DefaultTableModel model = new DefaultTableModel(
             new Object[]{"ID", "Sân bay đi", "Sân bay đến", "Số dặm"}, 0
@@ -52,9 +57,9 @@ public class PnlQuanLyTuyenBay extends JPanel {
         JPanel wrap = new JPanel(new BorderLayout(10, 10));
         wrap.add(form, BorderLayout.CENTER);
 
-        JButton btnAdd = new JButton("Thêm");
-        JButton btnUpdate = new JButton("Sửa");
-        JButton btnDelete = new JButton("Xóa");
+         btnAdd = new JButton("Thêm");
+         btnUpdate = new JButton("Sửa");
+         btnDelete = new JButton("Xóa");
 
         btnAdd.addActionListener(e -> add());
         btnUpdate.addActionListener(e -> update());
@@ -180,4 +185,11 @@ public class PnlQuanLyTuyenBay extends JPanel {
         @Override
         public String toString() { return text; }
     }
+
+    public void applyPermissions(List<Integer> actionIds) {
+    btnAdd.setVisible(actionIds.contains(ActionConstants.THEM));
+    btnUpdate.setVisible(actionIds.contains(ActionConstants.SUA));
+    btnDelete.setVisible(actionIds.contains(ActionConstants.XOA));
+    revalidate(); repaint();
+}
 }

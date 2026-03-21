@@ -46,4 +46,7 @@ public class AppNavigator {
 
         return sidebar;
     }
+    public JComponent get(String name) {
+    return screens.get(name);
+}
 }

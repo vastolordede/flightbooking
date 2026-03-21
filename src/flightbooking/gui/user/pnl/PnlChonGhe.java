@@ -7,6 +7,7 @@ import flightbooking.gui.user.theme.UserTheme;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -16,13 +17,14 @@ public class PnlChonGhe extends JPanel {
     private final AppNavigator nav;
     private final DatVeBUS datVeBUS = new DatVeBUS();
 
-    public static Integer GHE_ID_DA_CHON = null;
+    public static List<Integer> GHE_IDS_DA_CHON = new ArrayList<>();
     public static String GHE_TEXT_DA_CHON = "";
 
     private final JLabel lblInfo = new JLabel("Chọn ghế");
 
     public PnlChonGhe(AppNavigator nav) {
         this.nav = nav;
+        GHE_IDS_DA_CHON.clear();
 
         setLayout(new BorderLayout(12, 12));
         setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
@@ -85,6 +87,9 @@ public class PnlChonGhe extends JPanel {
 
             JButton b = new JButton(seatText);
             b.setFocusPainted(false);
+            if (GHE_IDS_DA_CHON.contains(g.getGheId())) {
+    b.setBackground(Color.GREEN);
+}
 
             if (g.isDaDat() || (g.getTrangThai() != null && g.getTrangThai() == 0)) {
                 b.setEnabled(false);
@@ -94,9 +99,15 @@ public class PnlChonGhe extends JPanel {
                 b.setBackground(Color.WHITE);
                 b.setForeground(UserTheme.ACCENT);
                 b.addActionListener(e -> {
-                    GHE_ID_DA_CHON = g.getGheId();
+                    if (GHE_IDS_DA_CHON.contains(g.getGheId())) {
+    GHE_IDS_DA_CHON.remove((Integer) g.getGheId());
+    b.setBackground(Color.WHITE);
+} else {
+    GHE_IDS_DA_CHON.add(g.getGheId());
+    b.setBackground(Color.GREEN);
+}
                     GHE_TEXT_DA_CHON = "Tầng " + (g.getTang() == null ? 1 : g.getTang()) + " - " + seatText;
-                    lblInfo.setText("Đã chọn: " + GHE_TEXT_DA_CHON + " | Chuyến: " + PnlKetQuaChuyenBay.CHUYEN_BAY_ID_CHON);
+                    lblInfo.setText("Đã chọn: " + GHE_IDS_DA_CHON.size() + " ghế");
                 });
             }
 
@@ -115,10 +126,10 @@ public class PnlChonGhe extends JPanel {
 
         back.addActionListener(e -> nav.show("KQ_CHUYEN"));
         next.addActionListener(e -> {
-            if (GHE_ID_DA_CHON == null) {
-                JOptionPane.showMessageDialog(this, "Bạn chưa chọn ghế.");
-                return;
-            }
+            if (GHE_IDS_DA_CHON.isEmpty()) {
+    JOptionPane.showMessageDialog(this, "Bạn chưa chọn ghế.");
+    return;
+}
             nav.show("HANH_KHACH");
         });
 

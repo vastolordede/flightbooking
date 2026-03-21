@@ -13,6 +13,7 @@ public class QuyenDAO {
 
         List<QuyenDTO> list = new ArrayList<>();
         String sql = "SELECT * FROM quyen WHERE danghoatdong = true ORDER BY quyen_id";
+        
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);

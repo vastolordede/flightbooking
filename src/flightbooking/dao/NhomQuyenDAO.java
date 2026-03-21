@@ -156,4 +156,52 @@ public List<NhomQuyenDTO> findAll() {
 
     return list;
 }
+    public List<Integer> getActionByNhom(int nhomId) {
+
+    List<Integer> list = new ArrayList<>();
+
+    String sql = "SELECT action_id FROM quyen_action_map WHERE quyen_id=?";
+
+    try (Connection conn = DBConnection.getConnection();
+         PreparedStatement ps = conn.prepareStatement(sql)) {
+
+        ps.setInt(1, nhomId);
+
+        ResultSet rs = ps.executeQuery();
+
+        while (rs.next()) {
+            list.add(rs.getInt("action_id"));
+        }
+
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+
+    return list;
+}
+public void saveActionForNhom(int nhomId, List<Integer> actionIds) {
+
+    String deleteSql = "DELETE FROM quyen_action_map WHERE quyen_id=?";
+    String insertSql = "INSERT INTO quyen_action_map(action_id, quyen_id) VALUES(?, ?)";
+
+    try (Connection conn = DBConnection.getConnection()) {
+
+        // Xóa hết action cũ
+        PreparedStatement psDel = conn.prepareStatement(deleteSql);
+        psDel.setInt(1, nhomId);
+        psDel.executeUpdate();
+
+        // Thêm lại action mới
+        PreparedStatement psIns = conn.prepareStatement(insertSql);
+
+        for (int aid : actionIds) {
+            psIns.setInt(1, aid);
+            psIns.setInt(2, nhomId);
+            psIns.executeUpdate();
+        }
+
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+}
 }

@@ -40,4 +40,8 @@ public void deleteNhomQuyen(int id) {
     dao.deleteAllQuyen(id);
     dao.deleteNhomQuyen(id);
 }
+
+public void saveActionForNhom(int nhomId, List<Integer> actionIds) {
+    new NhomQuyenDAO().saveActionForNhom(nhomId, actionIds);
+}
 }

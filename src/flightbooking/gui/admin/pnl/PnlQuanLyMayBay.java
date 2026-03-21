@@ -3,6 +3,7 @@ package flightbooking.gui.admin.pnl;
 import flightbooking.bus.GheGeneratorBUS;
 import flightbooking.bus.MayBayBUS;
 import flightbooking.dto.MayBayDTO;
+import flightbooking.util.ActionConstants;
 import flightbooking.dao.GheDAO;
 
 import javax.swing.*;
@@ -27,6 +28,12 @@ public class PnlQuanLyMayBay extends JPanel {
     private final JTextField txtTen = new JTextField();
     private final JTextField txtKieu = new JTextField();
 
+
+    private JButton btnAdd;
+    private JButton btnUpdate;
+    private JButton btnDelete;
+    private JButton btnGen;
+
     public PnlQuanLyMayBay() {
         setLayout(new BorderLayout(10,10));
         setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
@@ -48,9 +55,9 @@ public class PnlQuanLyMayBay extends JPanel {
         form.add(new JLabel("Kiểu máy bay:"));
         form.add(txtKieu);
 
-        JButton btnAdd = new JButton("Thêm");
-        JButton btnUpdate = new JButton("Sửa");
-        JButton btnDelete = new JButton("Xóa");
+         btnAdd = new JButton("Thêm");
+         btnUpdate = new JButton("Sửa");
+         btnDelete = new JButton("Xóa");
 
         btnAdd.addActionListener(e -> add());
         btnUpdate.addActionListener(e -> update());
@@ -61,7 +68,7 @@ public class PnlQuanLyMayBay extends JPanel {
         actions.add(btnUpdate);
         actions.add(btnDelete);
 
-        JButton btnGen = new JButton("Tạo ghế cho máy bay đang chọn");
+        btnGen = new JButton("Tạo ghế cho máy bay đang chọn");
         btnGen.addActionListener(e -> openGenSeatDialog());
 
         JPanel genActions = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -303,4 +310,12 @@ public class PnlQuanLyMayBay extends JPanel {
         @Override
         public String toString() { return ten; }
     }
+
+    public void applyPermissions(List<Integer> actionIds) {
+    btnAdd.setVisible(actionIds.contains(ActionConstants.THEM));
+    btnUpdate.setVisible(actionIds.contains(ActionConstants.SUA));
+    btnDelete.setVisible(actionIds.contains(ActionConstants.XOA));
+    btnGen.setVisible(actionIds.contains(ActionConstants.TAO_GHE));
+    revalidate(); repaint();
+}
 }

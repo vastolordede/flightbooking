@@ -2,6 +2,7 @@ package flightbooking.gui.admin.pnl;
 
 import flightbooking.bus.SanBayBUS;
 import flightbooking.dto.SanBayDTO;
+import flightbooking.util.ActionConstants;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -20,6 +21,10 @@ public class PnlQuanLySanBay extends JPanel {
     private final JTextField txtTen = new JTextField();
     private final JTextField txtThanhPho = new JTextField();
     private final JTextField txtQuocGia = new JTextField();
+
+    private JButton btnAdd;
+    private JButton btnUpdate;
+    private JButton btnDelete;
 
     public PnlQuanLySanBay() {
         setLayout(new BorderLayout(10,10));
@@ -41,9 +46,9 @@ public class PnlQuanLySanBay extends JPanel {
         form.add(new JLabel("Quốc gia"));
         form.add(txtQuocGia);
 
-        JButton btnAdd = new JButton("Thêm");
-        JButton btnUpdate = new JButton("Sửa");
-        JButton btnDelete = new JButton("Xóa");
+        btnAdd = new JButton("Thêm");
+        btnUpdate = new JButton("Sửa");
+        btnDelete = new JButton("Xóa");
 
         btnAdd.addActionListener(e -> add());
         btnUpdate.addActionListener(e -> update());
@@ -117,4 +122,13 @@ public class PnlQuanLySanBay extends JPanel {
         bus.xoaSanBay(id);
         reload();
     }
+
+    // Gọi hàm này sau khi load quyền
+    public void applyPermissions(List<Integer> actionIds) {
+    btnAdd.setVisible(actionIds.contains(ActionConstants.THEM));
+    btnUpdate.setVisible(actionIds.contains(ActionConstants.SUA));
+    btnDelete.setVisible(actionIds.contains(ActionConstants.XOA));
+    revalidate();
+    repaint();
+}
 }

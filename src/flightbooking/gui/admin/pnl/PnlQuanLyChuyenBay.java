@@ -8,6 +8,7 @@ import flightbooking.dto.ChuyenBayDTO;
 import flightbooking.dto.GiaHangChuyenBayDTO;
 import flightbooking.dto.MayBayDTO;
 import flightbooking.dto.TuyenBayDTO;
+import flightbooking.util.ActionConstants;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -30,6 +31,12 @@ public class PnlQuanLyChuyenBay extends JPanel {
 
     private final JComboBox<Item> cbTuyenBay = new JComboBox<>();
     private final JTextField txtHangHangKhongId = new JTextField();
+
+    private JButton btnAdd;
+    private JButton btnUpdate;
+    private JButton btnDelete;
+    private JButton btnGiaHang;
+    private JButton btnSeatMap;
 
     // ✅ đổi sang combo máy bay
     private final JComboBox<MayBayItem> cbMayBay = new JComboBox<>();
@@ -79,17 +86,17 @@ public class PnlQuanLyChuyenBay extends JPanel {
         form.add(new JLabel("Trạng thái"));
         form.add(cbTrangThai);
 
-        JButton btnAdd = new JButton("Thêm");
-        JButton btnUpdate = new JButton("Sửa");
-        JButton btnDelete = new JButton("Xóa");
-        JButton btnSeatMap = new JButton("Sơ đồ ghế");
+         btnAdd = new JButton("Thêm");
+         btnUpdate = new JButton("Sửa");
+         btnDelete = new JButton("Xóa");
+         btnSeatMap = new JButton("Sơ đồ ghế");
 
         btnAdd.addActionListener(e -> add());
         btnUpdate.addActionListener(e -> update());
         btnDelete.addActionListener(e -> delete());
         btnSeatMap.addActionListener(e -> openSeatMap());
 
-        JButton btnGiaHang = new JButton("Giá hạng ghế");
+        btnGiaHang = new JButton("Giá hạng ghế");
 
 btnGiaHang.addActionListener(e -> openGiaHangDialog());
 
@@ -424,5 +431,14 @@ private void openSeatMap() {
     d.add(new SeatMapPanel(chuyenBayId, mayBayId));
 
     d.setVisible(true);
+}
+
+public void applyPermissions(List<Integer> actionIds) {
+    btnAdd.setVisible(actionIds.contains(ActionConstants.THEM));
+    btnUpdate.setVisible(actionIds.contains(ActionConstants.SUA));
+    btnDelete.setVisible(actionIds.contains(ActionConstants.XOA));
+    btnGiaHang.setVisible(actionIds.contains(ActionConstants.GIA_HANG_GHE));
+    btnSeatMap.setVisible(actionIds.contains(ActionConstants.SO_DO_GHE));
+    revalidate(); repaint();
 }
 }

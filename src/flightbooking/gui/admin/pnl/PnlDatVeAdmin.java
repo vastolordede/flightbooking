@@ -5,6 +5,7 @@ import flightbooking.bus.DatVeBUS;
 import flightbooking.dto.ChuyenBayDTO;
 import flightbooking.dto.GheDTO;
 import flightbooking.dto.HanhKhachDTO;
+import flightbooking.util.ActionConstants;
 import flightbooking.util.SessionContext;
 
 import javax.swing.*;
@@ -17,6 +18,8 @@ public class PnlDatVeAdmin extends JPanel {
 
     private final DatVeBUS datVeBUS = new DatVeBUS();
     private final ChuyenBayBUS chuyenBayBUS = new ChuyenBayBUS();
+
+    private JButton btnTaoVe;
 
     // ✅ combo thay vì nhập ID
     private final JComboBox<ChuyenItem> cbChuyen = new JComboBox<>();
@@ -72,7 +75,7 @@ public class PnlDatVeAdmin extends JPanel {
 
         cbChuyen.addActionListener(e -> loadGheTheoChuyen());
 
-        JButton btnTaoVe = new JButton("Tạo vé");
+        btnTaoVe = new JButton("Tạo vé");
         btnTaoVe.addActionListener(e -> taoVe());
 
         JPanel wrap = new JPanel(new BorderLayout(10, 10));
@@ -146,16 +149,15 @@ public class PnlDatVeAdmin extends JPanel {
             items.add(item);
 
             // ✅ FIX: Lấy ID admin từ SessionContext (đã được set khi login)
-            String adminUsername = SessionContext.getAdminUsername();
+            
             Integer taiKhoanNhanVienId = SessionContext.getAdminTaiKhoanId();
+            if (taiKhoanNhanVienId == null || taiKhoanNhanVienId == 0) {
+    throw new RuntimeException("Admin chưa đăng nhập.");
+}
             
             // Nếu có admin session, bạn có thể lấy ID nhân viên từ username
             // Nhưng hiện tại để null (vì không có method lấy ID từ username trong SessionContext)
-            if (adminUsername != null) {
-                // TODO: Lấy nhân viên ID từ username nếu cần
-                // taiKhoanNhanVienId = nhanVienBUS.getIdByUsername(adminUsername);
-                taiKhoanNhanVienId = null; // Tạm để null
-            }
+            
 
             datVeBUS.datVe(
     null,
@@ -209,4 +211,8 @@ public class PnlDatVeAdmin extends JPanel {
             return text;
         }
     }
+    public void applyPermissions(List<Integer> actionIds) {
+    btnTaoVe.setVisible(actionIds.contains(ActionConstants.TAO_VE));
+    revalidate(); repaint();
+}
 }

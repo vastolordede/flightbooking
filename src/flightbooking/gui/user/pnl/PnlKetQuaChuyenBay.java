@@ -94,7 +94,7 @@ public class PnlKetQuaChuyenBay extends JPanel {
         return b;
     }
 
-    private void reload() {
+    public void reload() {
     model.setRowCount(0);
 
     int di = PnlTimChuyenBay.SANBAY_DI_ID;

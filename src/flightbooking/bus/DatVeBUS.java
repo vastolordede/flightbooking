@@ -138,6 +138,7 @@ if (taiKhoanKhachHangId != null && taiKhoanNhanVienId != null) {
             ve.setGheId(it.getGheId());
             ve.setHanhKhachId(hanhKhachId);
             ve.setTaiKhoanNhanVienId(taiKhoanNhanVienId);
+            ve.setTaiKhoanKhachHangId(taiKhoanKhachHangId);
             ve.setGiaChot(gia);
             ve.setThueChot(BigDecimal.ZERO);
             ve.setTrangThai(1);

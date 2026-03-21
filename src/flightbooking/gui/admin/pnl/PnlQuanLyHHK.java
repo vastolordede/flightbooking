@@ -2,9 +2,12 @@ package flightbooking.gui.admin.pnl;
 
 import flightbooking.bus.HangHangKhongBUS;
 import flightbooking.dto.HangHangKhongDTO;
+import flightbooking.util.ActionConstants;
+
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.util.List;
 
 public class PnlQuanLyHHK extends JPanel {
     private final HangHangKhongBUS hhkBUS = new HangHangKhongBUS();
@@ -14,6 +17,11 @@ public class PnlQuanLyHHK extends JPanel {
 
     private final JTable table = new JTable(model);
     private final JTextField txtTen = new JTextField();
+
+    // Thêm field
+    private JButton btnAdd;
+    private JButton btnUpdate;
+    private JButton btnDelete;
 
     public PnlQuanLyHHK() {
         setLayout(new BorderLayout(10, 10));
@@ -29,9 +37,9 @@ public class PnlQuanLyHHK extends JPanel {
         form.add(new JLabel("Tên hãng hàng không:"));
         form.add(txtTen);
 
-        JButton btnAdd = new JButton("Thêm");
-        JButton btnUpdate = new JButton("Sửa");
-        JButton btnDelete = new JButton("Xóa");
+        btnAdd = new JButton("Thêm");
+        btnUpdate = new JButton("Sửa");
+        btnDelete = new JButton("Xóa");
 
         btnAdd.addActionListener(e -> add());
         btnUpdate.addActionListener(e -> update());
@@ -87,5 +95,12 @@ public class PnlQuanLyHHK extends JPanel {
         hhkBUS.xoaHHK(id);
         reload();
         txtTen.setText("");
+    }
+    // Thêm method
+    public void applyPermissions(List<Integer> actionIds) {
+    btnAdd.setVisible(actionIds.contains(ActionConstants.THEM));
+    btnUpdate.setVisible(actionIds.contains(ActionConstants.SUA));
+    btnDelete.setVisible(actionIds.contains(ActionConstants.XOA));
+    revalidate(); repaint();
     }
 }

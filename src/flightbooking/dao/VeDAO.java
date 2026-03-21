@@ -25,64 +25,79 @@ public class VeDAO extends BaseDAO {
     }
 
     public int insert(VeDTO v) {
-        String sql =
-                "insert into ve(chuyenbay_id, ghe_id, hanhkhach_id, taikhoannhanvien_id, giachot, thuechot, trangthai) " +
-                "values (?,?,?,?,?,?,?) returning ve_id";
-        try (Connection c = getConnection();
-             PreparedStatement ps = c.prepareStatement(sql)) {
-
-            if (v.getChuyenBayId() != null)
-    ps.setInt(1, v.getChuyenBayId());
-else
-    ps.setNull(1, Types.INTEGER);
-
-if (v.getGheId() != null)
-    ps.setInt(2, v.getGheId());
-else
-    ps.setNull(2, Types.INTEGER);
-
-if (v.getHanhKhachId() != null)
-    ps.setInt(3, v.getHanhKhachId());
-else
-    ps.setNull(3, Types.INTEGER);
-
-if (v.getTaiKhoanNhanVienId() != null)
-    ps.setInt(4, v.getTaiKhoanNhanVienId());
-else
-    ps.setNull(4, Types.INTEGER);
-
-ps.setBigDecimal(5,
-        v.getGiaChot() != null ? v.getGiaChot() : BigDecimal.ZERO);
-
-ps.setBigDecimal(6,
-        v.getThueChot() != null ? v.getThueChot() : BigDecimal.ZERO);
-
-if (v.getTrangThai() != null)
-    ps.setInt(7, v.getTrangThai());
-else
-    ps.setNull(7, Types.SMALLINT);
-;
-
-            try (ResultSet rs = ps.executeQuery()) {
-                rs.next();
-                return rs.getInt(1);
-            }
-        } catch (SQLException e) {
-            // Lỗi hay gặp: unique (chuyenbay_id,ghe_id) nếu ghế vừa bị đặt
-            throw new RuntimeException("ve insert failed", e);
-        }
-    }
-    public List<VeDTO> findWithNhanVien(int chuyenBayId) {
     String sql =
-            "select v.ve_id, v.chuyenbay_id, v.ghe_id, v.hanhkhach_id, " +
-            "v.giachot, v.thuechot, v.trangthai, " +
-            "nv.nhanvien_id, nv.hoten as ten_nhan_vien " +
-            "from ve v " +
-            "left join hoadonve hdv on hdv.ve_id = v.ve_id " +
-            "left join hoadon hd on hd.hoadon_id = hdv.hoadon_id " +
-            "left join nhanvien nv on nv.nhanvien_id = hd.taikhoannhanvien_id " +
-            "where v.chuyenbay_id = ? " +
-            "order by v.ve_id";
+        "insert into ve(chuyenbay_id, ghe_id, hanhkhach_id, " +
+        "taikhoannhanvien_id, taikhoankhachhang_id, giachot, thuechot, trangthai) " +
+        "values (?, ?, ?, ?, ?, ?, ?, ?) RETURNING ve_id";
+
+    try (Connection c = getConnection();
+         PreparedStatement ps = c.prepareStatement(sql)) {
+
+        // 1. chuyenbay_id
+        if (v.getChuyenBayId() != null)
+            ps.setInt(1, v.getChuyenBayId());
+        else
+            ps.setNull(1, Types.INTEGER);
+
+        // 2. ghe_id
+        if (v.getGheId() != null)
+            ps.setInt(2, v.getGheId());
+        else
+            ps.setNull(2, Types.INTEGER);
+
+        // 3. hanhkhach_id
+        if (v.getHanhKhachId() != null)
+            ps.setInt(3, v.getHanhKhachId());
+        else
+            ps.setNull(3, Types.INTEGER);
+
+        // 4. taikhoannhanvien_id
+        if (v.getTaiKhoanNhanVienId() != null)
+            ps.setInt(4, v.getTaiKhoanNhanVienId());
+        else
+            ps.setNull(4, Types.INTEGER);
+
+        // 🔥 5. taikhoankhachhang_id (THIẾU TRƯỚC ĐÓ)
+        if (v.getTaiKhoanKhachHangId() != null)
+            ps.setInt(5, v.getTaiKhoanKhachHangId());
+        else
+            ps.setNull(5, Types.INTEGER);
+
+        // 6. giachot
+        ps.setBigDecimal(6,
+                v.getGiaChot() != null ? v.getGiaChot() : BigDecimal.ZERO);
+
+        // 7. thuechot
+        ps.setBigDecimal(7,
+                v.getThueChot() != null ? v.getThueChot() : BigDecimal.ZERO);
+
+        // 8. trangthai
+        ps.setInt(8,
+                v.getTrangThai() != null ? v.getTrangThai() : 1);
+
+        try (ResultSet rs = ps.executeQuery()) {
+            rs.next();
+            return rs.getInt("ve_id");
+        }
+
+    } catch (SQLException e) {
+        throw new RuntimeException("ve insert failed", e);
+    }
+}
+    public List<VeDTO> findWithNhanVien(int chuyenBayId) {
+    String sql = 
+    "select v.ve_id, v.chuyenbay_id, v.ghe_id, v.hanhkhach_id, " +
+    "v.giachot, v.thuechot, v.trangthai, " +
+    "nv.hoten as ten_nhan_vien, " +
+    "kh.email as email_khachhang " +
+    "from ve v " +
+    "left join hoadonve hdv on hdv.ve_id = v.ve_id " +
+    "left join hoadon hd on hd.hoadon_id = hdv.hoadon_id " +
+    "left join taikhoannhanvien tknv on tknv.taikhoannhanvien_id = hd.taikhoannhanvien_id " +
+    "left join nhanvien nv on nv.nhanvien_id = tknv.nhanvien_id " +
+    "left join taikhoankhachhang kh on kh.taikhoankhachhang_id = v.taikhoankhachhang_id " +
+    "where v.chuyenbay_id = ? " +
+    "order by v.ve_id";
 
     List<VeDTO> list = new ArrayList<>();
 

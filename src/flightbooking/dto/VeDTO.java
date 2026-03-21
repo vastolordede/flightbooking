@@ -13,6 +13,8 @@ public class VeDTO {
     private BigDecimal thueChot;
     private Integer trangThai;
     private LocalDateTime thoiDiemTao;
+    private Integer taiKhoanKhachHangId;
+private String emailKhachHang;
 
     public VeDTO() {
     }
@@ -97,4 +99,9 @@ public String getTenNhanVien() {
 public void setTenNhanVien(String tenNhanVien) {
     this.tenNhanVien = tenNhanVien;
 }
+public Integer getTaiKhoanKhachHangId() { return taiKhoanKhachHangId; }
+public void setTaiKhoanKhachHangId(Integer id) { this.taiKhoanKhachHangId = id; }
+
+public String getEmailKhachHang() { return emailKhachHang; }
+public void setEmailKhachHang(String s) { this.emailKhachHang = s; }
 }

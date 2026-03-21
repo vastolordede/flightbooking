@@ -125,6 +125,13 @@ public class PnlTimChuyenBay extends JPanel {
         NGAY = ngay;
 
         nav.show("KQ_CHUYEN");
+
+// ép reload lại bảng
+Component comp = nav.get("KQ_CHUYEN");
+if (comp instanceof PnlKetQuaChuyenBay) {
+    ((PnlKetQuaChuyenBay) comp).reload();
+}
+
     }
 
     private static class Item {
