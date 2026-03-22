@@ -124,12 +124,18 @@ public class PnlKetQuaChuyenBay extends JPanel {
 }
 
     private void chonChuyen() {
+        
         int row = table.getSelectedRow();
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Bạn hãy chọn 1 chuyến bay.");
             return;
         }
         CHUYEN_BAY_ID_CHON = Integer.parseInt(String.valueOf(model.getValueAt(row, 0)));
+        System.out.println("CHỌN CHUYẾN: " + CHUYEN_BAY_ID_CHON);
         nav.show("CHON_GHE");
+        Component comp = nav.get("CHON_GHE");
+    if (comp instanceof PnlChonGhe) {
+        ((PnlChonGhe) comp).reload();
+    }
     }
 }

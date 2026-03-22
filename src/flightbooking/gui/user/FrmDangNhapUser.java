@@ -117,7 +117,7 @@ private void handleLogin() {
         }
         
         this.dispose();
-        new FrmNguoiDung().setVisible(true); 
+        new FrmNguoiDung(user).setVisible(true);
     } else {
         // UiUtil trong KhachHangBUS sẽ tự động hiện thông báo lỗi rồi
     }

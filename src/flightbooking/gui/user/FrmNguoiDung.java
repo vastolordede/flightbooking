@@ -1,5 +1,6 @@
 package flightbooking.gui.user;
 
+import flightbooking.dto.KhachHangDTO;
 import flightbooking.gui.user.common.AppNavigator;
 import flightbooking.gui.user.pnl.*;
 import flightbooking.gui.user.theme.UserTheme;
@@ -10,8 +11,11 @@ import java.awt.*;
 public class FrmNguoiDung extends JFrame {
 
     private final AppNavigator nav = new AppNavigator();
+    private final KhachHangDTO currentUser;
 
-    public FrmNguoiDung() {
+    public FrmNguoiDung(KhachHangDTO user) {
+        this.currentUser = user;
+
         setTitle("FlightBooking - Đặt vé");
         setSize(1150, 760);
         setLocationRelativeTo(null);
@@ -20,6 +24,7 @@ public class FrmNguoiDung extends JFrame {
         JPanel top = buildTopBar();
         JPanel content = nav.getRoot();
 
+        // ===== REGISTER PANEL =====
         nav.register("TIM_CHUYEN", new PnlTimChuyenBay(nav));
         nav.register("KQ_CHUYEN", new PnlKetQuaChuyenBay(nav));
         nav.register("CHON_GHE", new PnlChonGhe(nav));
@@ -29,8 +34,12 @@ public class FrmNguoiDung extends JFrame {
         nav.show("TIM_CHUYEN");
 
         JPanel root = new JPanel(new BorderLayout());
+
         root.add(top, BorderLayout.NORTH);
         root.add(content, BorderLayout.CENTER);
+
+        // 🔥 ADD PANEL USER BÊN PHẢI
+        root.add(new PnlUserInfo(currentUser), BorderLayout.EAST);
 
         setContentPane(root);
     }
@@ -55,5 +64,4 @@ public class FrmNguoiDung extends JFrame {
         bar.add(left, BorderLayout.WEST);
         return bar;
     }
-    
 }

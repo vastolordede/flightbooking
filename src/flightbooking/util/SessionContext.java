@@ -96,7 +96,7 @@ public class SessionContext {
    // ===== USER/KHÁCH HÀNG =====
 
 public static Integer getCurrentUserId() {
-    return currentUser != null ? currentUser.getKhachHangId() : null;
+    return currentUser != null ? currentUser.getTaiKhoanKhachHangId() : null;
 }
 
 public static String getCurrentUsername() {

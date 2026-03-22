@@ -1,7 +1,13 @@
 package flightbooking.gui.user.pnl;
 
+import flightbooking.bus.DatVeBUS;
+import flightbooking.dto.HanhKhachDTO;
 import flightbooking.gui.user.common.AppNavigator;
+import flightbooking.gui.user.common.TempVeStore;
 import flightbooking.gui.user.theme.UserTheme;
+import flightbooking.gui.user.common.TempVeStore;
+import flightbooking.bus.DatVeBUS;
+import flightbooking.dto.HanhKhachDTO;
 
 import javax.swing.*;
 import java.awt.*;
@@ -69,7 +75,30 @@ public class PnlThongTinHanhKhach extends JPanel {
                 JOptionPane.showMessageDialog(this, "Vui lòng nhập họ tên.");
                 return;
             }
-            nav.show("XAC_NHAN");
+            // 👉 lưu vé tạm
+DatVeBUS.ThongTinHanhKhachVaGhe item = new DatVeBUS.ThongTinHanhKhachVaGhe();
+
+HanhKhachDTO hk = new HanhKhachDTO();
+hk.setHoTen(HO_TEN);
+hk.setSoGiayTo(SO_GIAY_TO);
+
+item.setHanhKhach(hk);
+item.setGheId(PnlChonGhe.GHE_ID_DANG_CHON);
+
+TempVeStore.add(item);
+
+// reset ghế
+PnlChonGhe.GHE_ID_DANG_CHON = null;
+
+// 👉 chuyển màn
+nav.show("XAC_NHAN");
+
+SwingUtilities.invokeLater(() -> {
+    Component comp = nav.get("XAC_NHAN");
+    if (comp instanceof PnlXacNhanDatVe) {
+        ((PnlXacNhanDatVe) comp).reload();
+    }
+});
         });
 
         p.add(back);

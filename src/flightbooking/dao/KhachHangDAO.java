@@ -10,19 +10,17 @@ public class KhachHangDAO extends BaseDAO {
     // ================= MAP RESULTSET =================
     private KhachHangDTO map(ResultSet rs) throws SQLException {
     KhachHangDTO kh = new KhachHangDTO();
-
-    // ❌ KHÔNG còn hanhkhach_id trong query
-    kh.setKhachHangId(0); // hoặc -1
-
-    // ❌ KHÔNG có hoten
-    kh.setHoTen(""); // hoặc null
-
-    // ✔️ có trong bảng
+    
+    // Dùng try/catch riêng vì không phải query nào cũng có cột này
+    try { kh.setTaiKhoanKhachHangId(rs.getInt("taikhoankhachhang_id")); } 
+    catch (SQLException ignored) {}
+    
+    kh.setKhachHangId(0);
+    kh.setHoTen(rs.getString("hoten"));
     kh.setDienThoai(rs.getString("dienthoai"));
     kh.setTenDangNhap(rs.getString("email"));
     kh.setMatKhauMaHoa(rs.getString("matkhau_mahoa"));
     kh.setDangHoatDong(rs.getInt("trangthai") == 1);
-
     return kh;
 }
 
@@ -47,59 +45,28 @@ public class KhachHangDAO extends BaseDAO {
     // ================= REGISTER =================
     public boolean register(String hoTen, String sdt, String email, String pass) {
 
-        if (existsByUsername(email)) return false;
+    if (existsByUsername(email)) return false;
 
-        String sqlInsertKH =
-                "INSERT INTO hanhkhach(hoten, dienthoai) VALUES(?, ?) RETURNING hanhkhach_id";
+    String sql =
+        "INSERT INTO taikhoankhachhang(email, dienthoai, matkhau_mahoa, trangthai, hoten) " +
+        "VALUES(?, ?, ?, ?, ?)";
 
-        String sqlInsertTK =
-                "INSERT INTO taikhoankhachhang(email, dienthoai, matkhau_mahoa, trangthai) VALUES(?, ?, ?, ?)";
+    try (Connection c = getConnection();
+         PreparedStatement ps = c.prepareStatement(sql)) {
 
-        try (Connection c = getConnection()) {
-            c.setAutoCommit(false);
+        ps.setString(1, email.trim());
+        ps.setString(2, sdt.trim());
+        ps.setString(3, pass);
+        ps.setInt(4, 1);
+        ps.setString(5, hoTen.trim());
 
-            int hanhkhachId = -1;
+        return ps.executeUpdate() > 0;
 
-            // 1. insert hanhkhach
-            try (PreparedStatement ps = c.prepareStatement(sqlInsertKH)) {
-                ps.setString(1, hoTen.trim());
-                ps.setString(2, sdt.trim());
-
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (rs.next()) {
-                        hanhkhachId = rs.getInt(1);
-                    }
-                }
-            }
-
-            if (hanhkhachId == -1) {
-                c.rollback();
-                return false;
-            }
-
-            // 2. insert taikhoan (KHÔNG dùng hanhkhach_id vì DB bạn không có FK)
-            try (PreparedStatement ps = c.prepareStatement(sqlInsertTK)) {
-
-                ps.setString(1, email.trim());
-                ps.setString(2, sdt.trim());
-                ps.setString(3, pass);
-                ps.setInt(4, 1); // trangthai = 1
-
-                int rows = ps.executeUpdate();
-
-                if (rows > 0) {
-                    c.commit();
-                    return true;
-                } else {
-                    c.rollback();
-                    return false;
-                }
-            }
-
-        } catch (SQLException e) {
-            throw new RuntimeException("khachhang register failed", e);
-        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+        throw new RuntimeException("khachhang register failed", e);
     }
+}
 
     // ================= LOGIN =================
     public boolean checkLogin(String email, String pass) {
@@ -126,27 +93,20 @@ public class KhachHangDAO extends BaseDAO {
 
     // ================= FIND BY EMAIL =================
     public KhachHangDTO findByUsername(String email) {
-
     String sql =
-        "SELECT email, dienthoai, matkhau_mahoa, trangthai " +
-        "FROM taikhoankhachhang " +
-        "WHERE LOWER(email) = LOWER(?)";
+    "SELECT taikhoankhachhang_id, email, dienthoai, matkhau_mahoa, trangthai, hoten " +
+    "FROM taikhoankhachhang " +
+    "WHERE LOWER(email) = LOWER(?)";
 
     try (Connection c = getConnection();
          PreparedStatement ps = c.prepareStatement(sql)) {
-
         ps.setString(1, email.trim());
-
         try (ResultSet rs = ps.executeQuery()) {
-            if (rs.next()) {
-                return map(rs); // ✅ giờ không crash nữa
-            }
+            if (rs.next()) return map(rs);
         }
-
     } catch (SQLException e) {
         throw new RuntimeException("khachhang findByUsername failed", e);
     }
-
     return null;
 }
 

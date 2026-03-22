@@ -36,8 +36,10 @@ else
                 return rs.getInt(1);
             }
         } catch (SQLException e) {
-            throw new RuntimeException("hoadon insert failed", e);
-        }
+    throw new RuntimeException("hoadon insert failed: " + e.getMessage() 
+        + " | SQLState=" + e.getSQLState() 
+        + " | ErrorCode=" + e.getErrorCode(), e);
+}
     }
 
     public void updateTongTien(int hoaDonId, BigDecimal tongTien) {

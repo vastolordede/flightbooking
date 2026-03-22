@@ -8,6 +8,7 @@ public class KhachHangDTO {
     private String tenDangNhap;
     private String matKhauMaHoa;
     private boolean dangHoatDong;
+    private int taiKhoanKhachHangId;
 
     public KhachHangDTO() {}
 
@@ -70,4 +71,8 @@ public class KhachHangDTO {
     public void setDangHoatDong(boolean dangHoatDong) {
         this.dangHoatDong = dangHoatDong;
     }
+
+    public int getTaiKhoanKhachHangId() { return taiKhoanKhachHangId; }
+    
+    public void setTaiKhoanKhachHangId(int id) { this.taiKhoanKhachHangId = id; }
 }

@@ -16,15 +16,16 @@ public class PnlChonGhe extends JPanel {
 
     private final AppNavigator nav;
     private final DatVeBUS datVeBUS = new DatVeBUS();
+    private final JLabel lblInfo = new JLabel("Chọn ghế");
+    private JComponent seatArea; // giữ ref để replace sau
 
-    public static List<Integer> GHE_IDS_DA_CHON = new ArrayList<>();
+    public static Integer GHE_ID_DANG_CHON = null;
     public static String GHE_TEXT_DA_CHON = "";
 
-    private final JLabel lblInfo = new JLabel("Chọn ghế");
 
     public PnlChonGhe(AppNavigator nav) {
         this.nav = nav;
-        GHE_IDS_DA_CHON.clear();
+       
 
         setLayout(new BorderLayout(12, 12));
         setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
@@ -33,8 +34,14 @@ public class PnlChonGhe extends JPanel {
         lblInfo.setForeground(UserTheme.ACCENT);
         add(lblInfo, BorderLayout.NORTH);
 
-        add(buildSeatTabs(), BorderLayout.CENTER);
+         // Placeholder rỗng ban đầu
+        seatArea = new JPanel();
+        add(seatArea, BorderLayout.CENTER);
+
         add(buildActions(), BorderLayout.SOUTH);
+
+        // add(buildSeatTabs(), BorderLayout.CENTER);
+        // add(buildActions(), BorderLayout.SOUTH);
     }
 
     private JComponent buildSeatTabs() {
@@ -87,7 +94,7 @@ public class PnlChonGhe extends JPanel {
 
             JButton b = new JButton(seatText);
             b.setFocusPainted(false);
-            if (GHE_IDS_DA_CHON.contains(g.getGheId())) {
+            if (GHE_ID_DANG_CHON != null && GHE_ID_DANG_CHON.equals(g.getGheId())) {
     b.setBackground(Color.GREEN);
 }
 
@@ -99,16 +106,27 @@ public class PnlChonGhe extends JPanel {
                 b.setBackground(Color.WHITE);
                 b.setForeground(UserTheme.ACCENT);
                 b.addActionListener(e -> {
-                    if (GHE_IDS_DA_CHON.contains(g.getGheId())) {
-    GHE_IDS_DA_CHON.remove((Integer) g.getGheId());
-    b.setBackground(Color.WHITE);
-} else {
-    GHE_IDS_DA_CHON.add(g.getGheId());
-    b.setBackground(Color.GREEN);
+
+    // reset tất cả ghế về trắng
+   Container parent = b.getParent();
+while (!(parent instanceof JPanel)) {
+    parent = parent.getParent();
 }
-                    GHE_TEXT_DA_CHON = "Tầng " + (g.getTang() == null ? 1 : g.getTang()) + " - " + seatText;
-                    lblInfo.setText("Đã chọn: " + GHE_IDS_DA_CHON.size() + " ghế");
-                });
+
+for (Component c : parent.getComponents()) {
+    if (c instanceof JButton) {
+        JButton btn = (JButton) c;
+        btn.setBackground(Color.WHITE);
+    }
+}
+
+    // set ghế đang chọn
+    GHE_ID_DANG_CHON = g.getGheId();
+    b.setBackground(Color.GREEN);
+
+    GHE_TEXT_DA_CHON = "Tầng " + (g.getTang() == null ? 1 : g.getTang()) + " - " + seatText;
+    lblInfo.setText("Đã chọn: " + seatText);
+});
             }
 
             grid.add(b);
@@ -126,9 +144,9 @@ public class PnlChonGhe extends JPanel {
 
         back.addActionListener(e -> nav.show("KQ_CHUYEN"));
         next.addActionListener(e -> {
-            if (GHE_IDS_DA_CHON.isEmpty()) {
-    JOptionPane.showMessageDialog(this, "Bạn chưa chọn ghế.");
-    return;
+                if (GHE_ID_DANG_CHON == null) {
+        JOptionPane.showMessageDialog(this, "Bạn chưa chọn ghế.");
+        return;
 }
             nav.show("HANH_KHACH");
         });
@@ -155,5 +173,18 @@ public class PnlChonGhe extends JPanel {
         b.setBorder(BorderFactory.createLineBorder(UserTheme.ACCENT));
         b.setPreferredSize(new Dimension(120, 36));
         return b;
+    }
+
+    /** Gọi method này mỗi khi panel được show */
+    public void reload() {
+        GHE_ID_DANG_CHON = null;
+        lblInfo.setText("Chọn ghế");
+
+        remove(seatArea);               // xóa panel ghế cũ
+        seatArea = buildSeatTabs();     // build lại với ID mới
+        add(seatArea, BorderLayout.CENTER);
+
+        revalidate();                   // ← bắt buộc để Swing vẽ lại
+        repaint();
     }
 }
