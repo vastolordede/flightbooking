@@ -9,6 +9,7 @@ import flightbooking.dao.GheDAO;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -142,13 +143,40 @@ public class PnlQuanLyMayBay extends JPanel {
     }
 
     private void delete() {
-        int row = table.getSelectedRow();
-        if (row < 0) return;
+    int row = table.getSelectedRow();
+    if (row < 0) return;
 
-        int id = Integer.parseInt(String.valueOf(model.getValueAt(row, 0)));
+    int id = Integer.parseInt(String.valueOf(model.getValueAt(row, 0)));
+
+    // Confirm with user before deleting
+    int confirm = JOptionPane.showConfirmDialog(this, "Are you sure you want to delete this airplane?", "Confirm Delete", JOptionPane.YES_NO_OPTION);
+    if (confirm != JOptionPane.YES_OPTION) return;
+
+    try {
         mayBayBUS.xoaMayBay(id);
         reload();
+        JOptionPane.showMessageDialog(this, "Airplane deleted successfully!");
+    } catch (RuntimeException e) {
+        // Look inside the RuntimeException for the database error
+        Throwable cause = e.getCause();
+        if (cause instanceof org.postgresql.util.PSQLException) {
+            org.postgresql.util.PSQLException sqlEx = (org.postgresql.util.PSQLException) cause;
+            
+            // "23503" is the standard SQL state for Foreign Key Violation
+            if ("23503".equals(sqlEx.getSQLState())) {
+                JOptionPane.showMessageDialog(this, 
+                    "Cannot delete: This airplane is currently linked to existing flights.\n" +
+                    "Please delete the flights associated with this airplane first.", 
+                    "Database Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+        }
+        
+        // Fallback for other unexpected errors
+        JOptionPane.showMessageDialog(this, "Error: " + e.getMessage());
+        e.printStackTrace();
     }
+}
 
     private void openGenSeatDialog() {
         int row = table.getSelectedRow();
@@ -224,60 +252,74 @@ public class PnlQuanLyMayBay extends JPanel {
         JButton btnCancel = new JButton("Hủy");
 
         btnOk.addActionListener(e -> {
-            try {
-                if (!gheDAO.findByMayBay(mayBayId).isEmpty()) {
-                    JOptionPane.showMessageDialog(dialog, "Máy bay đã có ghế trong Database.\nHãy xóa cũ trước khi tạo lại.");
-                    return;
-                }
+    try {
+        if (!gheDAO.findByMayBay(mayBayId).isEmpty()) {
+            JOptionPane.showMessageDialog(dialog, "Máy bay đã có ghế trong Database.\nHãy xóa cũ trước khi tạo lại.");
+            return;
+        }
 
-                if (configRows.isEmpty()) {
-                    JOptionPane.showMessageDialog(dialog, "Vui lòng thêm ít nhất 1 cấu hình hạng ghế.");
-                    return;
-                }
+        if (configRows.isEmpty()) {
+            JOptionPane.showMessageDialog(dialog, "Vui lòng thêm ít nhất 1 cấu hình hạng ghế.");
+            return;
+        }
 
-                int tongGheDaTao = 0;
-                int rowOffset = 0;
+        int tongGheDaTao = 0;
+        int rowOffset = 0;
 
-                for (ConfigRow rowData : configRows) {
-                    HangGheItem selectedHangGhe = (HangGheItem) rowData.cbHangGhe.getSelectedItem();
-                    int hangGheId = selectedHangGhe.id;
-                    String tenHang = selectedHangGhe.ten;
-                    
-                    int soGhe = (int) rowData.spSoGhe.getValue();
-                    int soHang = (int) rowData.spSoHang.getValue();
-                    int soCot = (int) Math.ceil((double) soGhe / soHang);
+        // 🔥 BƯỚC 1: VALIDATE ALL TRƯỚC
+        for (ConfigRow rowData : configRows) {
+            int soGhe = (int) rowData.spSoGhe.getValue();
+            int soHang = (int) rowData.spSoHang.getValue();
 
-                    gheGenBUS.taoGheTheoHang(
-        mayBayId,
-        hangGheId,
-        tenHang,
-        soGhe,
-        soHang,
-        rowOffset
-);
-                    
-                    rowOffset += soHang; 
-                    tongGheDaTao += (soHang * soCot);
-                }
-
-                // Cập nhật lại số lượng ghế vào database
-                MayBayDTO mbUpdate = new MayBayDTO();
-                mbUpdate.setMayBayId(mayBayId);
-                // Giữ lại tên và kiểu (cần truy vấn lại hoặc dùng tạm dữ liệu từ bảng)
-                mbUpdate.setTenMayBay(String.valueOf(model.getValueAt(row, 1)));
-                mbUpdate.setKieuMayBay(String.valueOf(model.getValueAt(row, 2)));
-                mbUpdate.setTongSoGhe(tongGheDaTao);
-                mayBayBUS.capNhatMayBay(mbUpdate);
-
-                JOptionPane.showMessageDialog(dialog, "Thành công! Đã tự động tạo " + tongGheDaTao + " ghế.");
-                dialog.dispose();
-                reload(); // Tải lại bảng để hiển thị số lượng ghế mới
-
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(dialog, "Lỗi: " + ex.getMessage());
-                ex.printStackTrace();
+            if (soGhe <= 0 || soHang <= 0 || soGhe < soHang) {
+                JOptionPane.showMessageDialog(dialog, "Dữ liệu không hợp lệ (soGhe >= soHang > 0)");
+                return; // ❌ CHƯA TẠO GÌ CẢ → AN TOÀN
             }
-        });
+        }
+
+        for (ConfigRow rowData : configRows) {
+            HangGheItem selectedHangGhe = (HangGheItem) rowData.cbHangGhe.getSelectedItem();
+            int hangGheId = selectedHangGhe.id;
+            String tenHang = selectedHangGhe.ten;
+
+            int soGhe = (int) rowData.spSoGhe.getValue();
+            int soHang = (int) rowData.spSoHang.getValue();
+
+            // ✅ TÍNH SỐ CỘT CHỈ ĐỂ CHIA GRID (KHÔNG NHÂN NGƯỢC)
+            int soCot = (int) Math.ceil((double) soGhe / soHang);
+
+            // ✅ GỌI BUS (TRUYỀN ĐỦ soCot)
+            gheGenBUS.taoGheTheoHang(
+                    mayBayId,
+                    hangGheId,
+                    tenHang,
+                    soGhe,
+                    soHang,
+                    soCot,
+                    rowOffset
+            );
+
+            rowOffset += soHang;
+            tongGheDaTao += soGhe; // ✅ CHUẨN
+        }
+
+        MayBayDTO mbUpdate = new MayBayDTO();
+        mbUpdate.setMayBayId(mayBayId);
+        mbUpdate.setTenMayBay(String.valueOf(model.getValueAt(row, 1)));
+        mbUpdate.setKieuMayBay(String.valueOf(model.getValueAt(row, 2)));
+        mbUpdate.setTongSoGhe(tongGheDaTao);
+
+        mayBayBUS.capNhatMayBay(mbUpdate);
+
+        JOptionPane.showMessageDialog(dialog, "Thành công! Đã tạo " + tongGheDaTao + " ghế.");
+        dialog.dispose();
+        reload();
+
+    } catch (Exception ex) {
+        JOptionPane.showMessageDialog(dialog, "Lỗi: " + ex.getMessage());
+        ex.printStackTrace();
+    }
+});
 
         btnCancel.addActionListener(e -> dialog.dispose());
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT));

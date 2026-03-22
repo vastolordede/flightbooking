@@ -118,4 +118,8 @@ public class KhachHangBUS {
     public java.util.List<KhachHangDTO> getAll() {
         return khDAO.findAll();
     }
+    public int getDiem(int id) {
+    return khDAO.getDiem(id);
+}
+
 }

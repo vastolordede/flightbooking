@@ -11,6 +11,7 @@ public class DatVeBUS {
 
     private final TuyenBayDAO tuyenBayDAO = new TuyenBayDAO();
     private final ChuyenBayDAO chuyenBayDAO = new ChuyenBayDAO();
+    private final KhachHangDAO khachHangDAO = new KhachHangDAO();
     private final GheDAO gheDAO = new GheDAO();
     private final VeDAO veDAO = new VeDAO();
 
@@ -84,99 +85,152 @@ public class DatVeBUS {
 
     // 4) ĐẶT VÉ
     public KetQuaDatVe datVe(
-            Integer taiKhoanKhachHangId,
-            Integer taiKhoanNhanVienId,
-            int chuyenBayId,
-            List<ThongTinHanhKhachVaGhe> items,
-            String phuongThucThanhToan
-    ) {
-        if (items == null || items.isEmpty()) throw new RuntimeException("Danh sach hanh khach/ghe rong");
-
-        
-
-        // trước khi tạo hóa đơn
-if (taiKhoanKhachHangId == null && taiKhoanNhanVienId == null) {
-    throw new RuntimeException("Phải có người đặt (khách hàng hoặc nhân viên)");
-}
-
-if (taiKhoanKhachHangId != null && taiKhoanNhanVienId != null) {
-    throw new RuntimeException("Chỉ được 1 trong 2: khách hàng hoặc nhân viên");
-}
-        
-
-        // 1) kiểm tra ghế trùng/đã đặt
-        Set<Integer> unique = new HashSet<>();
-        for (ThongTinHanhKhachVaGhe it : items) {
-            if (!unique.add(it.getGheId())) throw new RuntimeException("Trung ghe_id=" + it.getGheId());
-        }
-        Set<Integer> daDat = new HashSet<>(veDAO.findGheIdDaDat(chuyenBayId));
-        for (ThongTinHanhKhachVaGhe it : items) {
-            if (daDat.contains(it.getGheId())) throw new RuntimeException("Ghe da duoc dat: ghe_id=" + it.getGheId());
-        }
-
-        // 2) tạo hóa đơn trước
-        HoaDonDTO hd = new HoaDonDTO();
-        hd.setTaiKhoanKhachHangId(taiKhoanKhachHangId);
-        hd.setTaiKhoanNhanVienId(taiKhoanNhanVienId);
-        hd.setTrangThai(1);
-
-        int hoaDonId = hoaDonDAO.insert(hd);
-
-        BigDecimal tong = BigDecimal.ZERO;
-        List<Integer> veIds = new ArrayList<>();
-
-        // 3) loop tạo hành khách + vé + liên kết hóa đơn
-        for (ThongTinHanhKhachVaGhe it : items) {
-            if (it.getHanhKhach() == null) throw new RuntimeException("Thong tin hanh khach rong");
-
-            int hanhKhachId = hanhKhachDAO.insert(it.getHanhKhach());
-
-            BigDecimal gia = tinhGiaGhe(chuyenBayId, it.getGheId());
-
-            VeDTO ve = new VeDTO();
-            ve.setChuyenBayId(chuyenBayId);
-            ve.setGheId(it.getGheId());
-            ve.setHanhKhachId(hanhKhachId);
-            ve.setTaiKhoanNhanVienId(taiKhoanNhanVienId);
-            ve.setTaiKhoanKhachHangId(taiKhoanKhachHangId);
-            ve.setGiaChot(gia);
-            ve.setThueChot(BigDecimal.ZERO);
-            ve.setTrangThai(1);
-
-            int veId = veDAO.insert(ve);
-            veIds.add(veId);
-
-            HoaDonVeDTO hdv = new HoaDonVeDTO();
-            hdv.setHoaDonId(hoaDonId);
-            hdv.setVeId(veId);
-            hoaDonVeDAO.insert(hdv);
-
-            tong = tong.add(gia);
-        }
-
-        // 4) update tongtien
-        hoaDonDAO.updateTongTien(hoaDonId, tong);
-
-        // 5) thanh toán
-        ThanhToanDTO tt = new ThanhToanDTO();
-        tt.setHoaDonId(hoaDonId);
-        tt.setSoTien(tong);
-        tt.setPhuongThuc((phuongThucThanhToan == null || phuongThucThanhToan.trim().isEmpty())
-                ? "cash"
-                : phuongThucThanhToan.trim());
-        tt.setTrangThai(1);
-
-        int thanhToanId = thanhToanDAO.insert(tt);
-
-        KetQuaDatVe kq2 = new KetQuaDatVe();
-        kq2.setHoaDonId(hoaDonId);
-        kq2.setVeIds(veIds);
-        kq2.setThanhToanId(thanhToanId);
-        kq2.setTongTien(tong);
-        return kq2;
-
-        
+        Integer taiKhoanKhachHangId,
+        Integer taiKhoanNhanVienId,
+        int chuyenBayId,
+        List<ThongTinHanhKhachVaGhe> items,
+        String phuongThucThanhToan,
+    int diemSuDung
+) {
+    if (items == null || items.isEmpty()) {
+        throw new RuntimeException("Danh sach hanh khach/ghe rong");
     }
+
+    if (taiKhoanKhachHangId == null && taiKhoanNhanVienId == null) {
+        throw new RuntimeException("Phải có người đặt");
+    }
+
+    if (taiKhoanKhachHangId != null && taiKhoanNhanVienId != null) {
+        throw new RuntimeException("Chỉ được 1 trong 2: khách hàng hoặc nhân viên");
+    }
+
+    // 🔥 CHỈ USER MỚI DÙNG ĐIỂM
+    
+    if (taiKhoanKhachHangId != null) {
+    int diemHienTai = khachHangDAO.getDiem(taiKhoanKhachHangId);
+
+    if (diemSuDung > diemHienTai) {
+        diemSuDung = diemHienTai;
+    }
+
+    if (diemSuDung < 0) {
+        diemSuDung = 0;
+    }
+
+    System.out.println("Điểm hiện tại: " + diemHienTai);
+    System.out.println("Điểm sử dụng: " + diemSuDung);
+}
+
+    // kiểm tra ghế
+    Set<Integer> unique = new HashSet<>();
+    for (ThongTinHanhKhachVaGhe it : items) {
+        if (!unique.add(it.getGheId())) {
+            throw new RuntimeException("Trùng ghế: " + it.getGheId());
+        }
+    }
+
+    Set<Integer> daDat = new HashSet<>(veDAO.findGheIdDaDat(chuyenBayId));
+    for (ThongTinHanhKhachVaGhe it : items) {
+        if (daDat.contains(it.getGheId())) {
+            throw new RuntimeException("Ghế đã đặt: " + it.getGheId());
+        }
+    }
+
+    // tạo hóa đơn
+    HoaDonDTO hd = new HoaDonDTO();
+    hd.setTaiKhoanKhachHangId(taiKhoanKhachHangId);
+    hd.setTaiKhoanNhanVienId(taiKhoanNhanVienId);
+    hd.setTrangThai(1);
+
+    int hoaDonId = hoaDonDAO.insert(hd);
+
+    BigDecimal tong = BigDecimal.ZERO;
+    List<Integer> veIds = new ArrayList<>();
+
+    // ===== LOOP =====
+    for (ThongTinHanhKhachVaGhe it : items) {
+
+        int hanhKhachId = hanhKhachDAO.insert(it.getHanhKhach());
+
+        BigDecimal gia = tinhGiaGhe(chuyenBayId, it.getGheId());
+        System.out.println("Giá gốc: " + gia);
+
+        
+
+        VeDTO ve = new VeDTO();
+        ve.setChuyenBayId(chuyenBayId);
+        ve.setGheId(it.getGheId());
+        ve.setHanhKhachId(hanhKhachId);
+        ve.setTaiKhoanNhanVienId(taiKhoanNhanVienId);
+        ve.setTaiKhoanKhachHangId(taiKhoanKhachHangId);
+        ve.setGiaChot(gia);
+        ve.setThueChot(BigDecimal.ZERO);
+        ve.setTrangThai(1);
+
+        int veId = veDAO.insert(ve);
+        veIds.add(veId);
+
+        HoaDonVeDTO hdv = new HoaDonVeDTO();
+        hdv.setHoaDonId(hoaDonId);
+        hdv.setVeId(veId);
+        hoaDonVeDAO.insert(hdv);
+
+        tong = tong.add(gia);
+        // 🔥 TRỪ ĐIỂM 1 LẦN DUY NHẤT
+
+    }
+// ✅ TRỪ ĐIỂM 1 LẦN
+if (taiKhoanKhachHangId != null && diemSuDung > 0) {
+
+    BigDecimal giam = BigDecimal.valueOf(diemSuDung * 10);
+    tong = tong.subtract(giam);
+
+    if (tong.compareTo(BigDecimal.ZERO) < 0) {
+        tong = BigDecimal.ZERO;
+    }
+}
+    // 🔥 TRỪ ĐIỂM (1 LẦN)
+    if (taiKhoanKhachHangId != null && diemSuDung > 0) {
+        khachHangDAO.truDiem(taiKhoanKhachHangId, diemSuDung);
+        System.out.println("Đã trừ điểm: " + diemSuDung);
+    }
+
+    hoaDonDAO.updateTongTien(hoaDonId, tong);
+
+    // thanh toán
+    ThanhToanDTO tt = new ThanhToanDTO();
+    tt.setHoaDonId(hoaDonId);
+    tt.setSoTien(tong);
+    tt.setPhuongThuc(phuongThucThanhToan);
+    tt.setTrangThai(1);
+
+    int thanhToanId = thanhToanDAO.insert(tt);
+
+    // 🔥 CỘNG ĐIỂM (SAU KHI THÀNH CÔNG)
+    if (taiKhoanKhachHangId != null) {
+        int soDam = getSoDam(chuyenBayId);
+int diemCong = 0;
+
+for (ThongTinHanhKhachVaGhe it : items) {
+    GheDTO ghe = gheDAO.findById(it.getGheId());
+    double mul = getMultiplier(ghe.getHangGheId());
+
+    diemCong += (int) (soDam * mul);
+}
+
+        khachHangDAO.congDiem(taiKhoanKhachHangId, diemCong);
+
+        System.out.println("Cộng điểm: " + diemCong);
+    }
+
+    KetQuaDatVe kq = new KetQuaDatVe();
+    kq.setHoaDonId(hoaDonId);
+    kq.setVeIds(veIds);
+    kq.setThanhToanId(thanhToanId);
+    kq.setTongTien(tong);
+
+    return kq;
+}
 
     // ====== DTO phụ cho BUS ======
     public static class ThongTinHanhKhachVaGhe {
@@ -208,4 +262,32 @@ if (taiKhoanKhachHangId != null && taiKhoanNhanVienId != null) {
         public BigDecimal getTongTien() { return tongTien; }
         public void setTongTien(BigDecimal tongTien) { this.tongTien = tongTien; }
     }
+    private int getSoDam(int chuyenBayId) {
+    try {
+        ChuyenBayDTO cb = chuyenBayDAO.findById(chuyenBayId);
+        if (cb == null) throw new RuntimeException("Không tìm thấy chuyến bay");
+
+        Integer tuyenBayId = cb.getTuyenBayId();
+
+        TuyenBayDTO tb = tuyenBayDAO.findById(tuyenBayId);
+        if (tb == null) throw new RuntimeException("Không tìm thấy tuyến bay");
+
+        return tb.getSoDam();
+
+    } catch (Exception e) {
+        throw new RuntimeException(e);
+    }
+}
+private double getMultiplier(Integer hangGheId) {
+    if (hangGheId == null) return 0;
+
+    switch (hangGheId) {
+        case 3: return 1.0;   // First
+        case 2: return 0.5;   // Business
+        case 4: return 0.25;  // Premium
+        case 1: return 0.0;   // Economy
+        default: return 0;
+    }
+}
+
 }

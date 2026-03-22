@@ -1,5 +1,6 @@
 package flightbooking.dto;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public class ThongTinVeDTO {
@@ -51,4 +52,12 @@ public class ThongTinVeDTO {
 
     public String getSoGiayTo() { return soGiayTo; }
     public void setSoGiayTo(String soGiayTo) { this.soGiayTo = soGiayTo; }
+    private int gheId;
+
+public int getGheId() { return gheId; }
+public void setGheId(int gheId) { this.gheId = gheId; }
+private BigDecimal gia;
+
+public BigDecimal getGia() { return gia; }
+public void setGia(BigDecimal gia) { this.gia = gia; }
 }

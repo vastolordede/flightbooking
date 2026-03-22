@@ -67,7 +67,14 @@ public class PnlThongTinHanhKhach extends JPanel {
         JButton back = ghostButton("← Quay lại");
         JButton next = primaryButton("Xác nhận →");
 
-        back.addActionListener(e -> nav.show("CHON_GHE"));
+        back.addActionListener(e -> {
+    nav.show("CHON_GHE");
+
+    Component comp = nav.get("CHON_GHE");
+    if (comp instanceof PnlChonGhe) {
+        ((PnlChonGhe) comp).reload();
+    }
+});
         next.addActionListener(e -> {
             HO_TEN = txtHoTen.getText().trim();
             SO_GIAY_TO = txtSoGiayTo.getText().trim();
@@ -85,7 +92,7 @@ hk.setSoGiayTo(SO_GIAY_TO);
 item.setHanhKhach(hk);
 item.setGheId(PnlChonGhe.GHE_ID_DANG_CHON);
 
-TempVeStore.add(item);
+TempVeStore.upsertCurrent(item);
 
 // reset ghế
 PnlChonGhe.GHE_ID_DANG_CHON = null;
@@ -124,4 +131,17 @@ SwingUtilities.invokeLater(() -> {
         b.setPreferredSize(new Dimension(120, 36));
         return b;
     }
+
+    public void reload() {
+
+    DatVeBUS.ThongTinHanhKhachVaGhe current = TempVeStore.getCurrent();
+
+    if (current != null && current.getHanhKhach() != null) {
+        txtHoTen.setText(current.getHanhKhach().getHoTen());
+        txtSoGiayTo.setText(current.getHanhKhach().getSoGiayTo());
+    } else {
+        txtHoTen.setText("");
+        txtSoGiayTo.setText("");
+    }
+}
 }

@@ -1,6 +1,10 @@
 package flightbooking.gui.user.common;
 
 import javax.swing.*;
+
+import flightbooking.gui.user.pnl.PnlChonGhe;
+import flightbooking.gui.user.pnl.PnlThongTinHanhKhach;
+
 import java.awt.*;
 import java.util.HashMap;
 import java.util.Map;
@@ -28,6 +32,16 @@ public class AppNavigator {
     }
 
     public void show(String name) {
+        JComponent comp = screens.get(name);
+
+        if (comp instanceof PnlChonGhe) {
+            ((PnlChonGhe) comp).reload();
+        }
+
+        if (comp instanceof PnlThongTinHanhKhach) {
+        ((PnlThongTinHanhKhach) comp).reload();
+        }
+
         ((CardLayout) content.getLayout()).show(content, name);
     }
 

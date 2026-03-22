@@ -75,4 +75,13 @@ public class KhachHangDTO {
     public int getTaiKhoanKhachHangId() { return taiKhoanKhachHangId; }
     
     public void setTaiKhoanKhachHangId(int id) { this.taiKhoanKhachHangId = id; }
+    private int diemTichLuy;
+
+public int getDiemTichLuy() {
+    return diemTichLuy;
+}
+
+public void setDiemTichLuy(int diemTichLuy) {
+    this.diemTichLuy = diemTichLuy;
+}
 }

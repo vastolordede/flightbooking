@@ -1,6 +1,7 @@
 package flightbooking.gui.user.pnl;
 
 import flightbooking.dto.KhachHangDTO;
+import flightbooking.gui.user.FrmMyTickets;
 
 import javax.swing.*;
 import java.awt.*;
@@ -14,25 +15,24 @@ public class PnlUserInfo extends JPanel {
         setBorder(BorderFactory.createEmptyBorder(20, 10, 20, 10));
         setBackground(new Color(245, 245, 245));
 
-        // ===== AVATAR =====
-        JLabel lblAvatar = new JLabel();
-        lblAvatar.setPreferredSize(new Dimension(100, 100));
-        lblAvatar.setMaximumSize(new Dimension(100, 100));
+        JLabel lblAvatar = new JLabel("👤");
+        lblAvatar.setFont(new Font("Arial", Font.PLAIN, 40));
         lblAvatar.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // 👉 nếu chưa có ảnh thì dùng text
-        lblAvatar.setText("👤");
-        lblAvatar.setFont(new Font("Arial", Font.PLAIN, 40));
-
-        // ===== NAME =====
         JLabel lblName = new JLabel("Tên: " + safe(user.getHoTen()));
         lblName.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // ===== EMAIL =====
         JLabel lblEmail = new JLabel("Email: " + safe(user.getTenDangNhap()));
         lblEmail.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // ===== LOGOUT =====
+        // 🔥 FIX: tạm thời lấy điểm từ DAO nếu DTO chưa có
+        JLabel lblDiem = new JLabel("Điểm: " + user.getDiemTichLuy());
+lblDiem.setAlignmentX(Component.CENTER_ALIGNMENT);
+JButton btnMyTickets = new JButton("🎫 Vé của tôi");
+btnMyTickets.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+
+
         JButton btnLogout = new JButton("Đăng xuất");
         btnLogout.setAlignmentX(Component.CENTER_ALIGNMENT);
 
@@ -40,14 +40,20 @@ public class PnlUserInfo extends JPanel {
             SwingUtilities.getWindowAncestor(this).dispose();
             new flightbooking.gui.user.FrmDangNhapUser().setVisible(true);
         });
+        btnMyTickets.addActionListener(e -> {
+    new FrmMyTickets(user.getTaiKhoanKhachHangId()).setVisible(true);
+});
 
-        // ===== ADD =====
         add(lblAvatar);
         add(Box.createVerticalStrut(15));
         add(lblName);
         add(Box.createVerticalStrut(10));
         add(lblEmail);
+        add(Box.createVerticalStrut(10));
+        add(lblDiem);
         add(Box.createVerticalStrut(20));
+        add(btnMyTickets);
+add(Box.createVerticalStrut(20));
         add(btnLogout);
     }
 

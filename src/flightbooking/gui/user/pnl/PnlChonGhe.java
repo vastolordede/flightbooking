@@ -3,13 +3,13 @@ package flightbooking.gui.user.pnl;
 import flightbooking.bus.DatVeBUS;
 import flightbooking.dto.GheDTO;
 import flightbooking.gui.user.common.AppNavigator;
+import flightbooking.gui.user.common.TempVeStore;
 import flightbooking.gui.user.theme.UserTheme;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 public class PnlChonGhe extends JPanel {
@@ -17,15 +17,13 @@ public class PnlChonGhe extends JPanel {
     private final AppNavigator nav;
     private final DatVeBUS datVeBUS = new DatVeBUS();
     private final JLabel lblInfo = new JLabel("Chọn ghế");
-    private JComponent seatArea; // giữ ref để replace sau
+    private JComponent seatArea;
 
     public static Integer GHE_ID_DANG_CHON = null;
     public static String GHE_TEXT_DA_CHON = "";
 
-
     public PnlChonGhe(AppNavigator nav) {
         this.nav = nav;
-       
 
         setLayout(new BorderLayout(12, 12));
         setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
@@ -34,105 +32,146 @@ public class PnlChonGhe extends JPanel {
         lblInfo.setForeground(UserTheme.ACCENT);
         add(lblInfo, BorderLayout.NORTH);
 
-         // Placeholder rỗng ban đầu
         seatArea = new JPanel();
         add(seatArea, BorderLayout.CENTER);
 
-        add(buildActions(), BorderLayout.SOUTH);
+        JPanel south = new JPanel(new BorderLayout());
+        south.setOpaque(false);
 
-        // add(buildSeatTabs(), BorderLayout.CENTER);
-        // add(buildActions(), BorderLayout.SOUTH);
+        south.add(buildLegend(), BorderLayout.CENTER);
+        south.add(buildActions(), BorderLayout.SOUTH);
+
+        add(south, BorderLayout.SOUTH);
     }
 
-    private JComponent buildSeatTabs() {
+    private JComponent buildSeatMap() {
         int chuyenBayId = PnlKetQuaChuyenBay.CHUYEN_BAY_ID_CHON;
+        List<GheDTO> ds = datVeBUS.dsGheCuaChuyen(chuyenBayId);
 
-        List<GheDTO> all = datVeBUS.dsGheCuaChuyen(chuyenBayId);
-
-        if (all.isEmpty()) {
-            JPanel empty = new JPanel(new BorderLayout());
-            empty.setBackground(UserTheme.CARD);
-            empty.setBorder(BorderFactory.createEmptyBorder(16,16,16,16));
-            JLabel t = new JLabel("Chuyến này chưa có ghế (DB rỗng) hoặc thiếu maybay_id.");
-            t.setForeground(UserTheme.ACCENT);
-            empty.add(t, BorderLayout.CENTER);
+        if (ds.isEmpty()) {
+            JPanel empty = new JPanel();
+            empty.add(new JLabel("Không có ghế"));
             return empty;
         }
 
-        // group theo tầng
-        Map<Integer, List<GheDTO>> byTang = all.stream()
-                .collect(Collectors.groupingBy(g -> g.getTang() == null ? 1 : g.getTang()));
+        // 🔥 Map row-col
+        Map<Integer, Map<Integer, GheDTO>> map = new HashMap<>();
+        TreeSet<Integer> rows = new TreeSet<>();
+        int maxCol = 0;
 
-        JTabbedPane tabs = new JTabbedPane();
-        tabs.setBackground(UserTheme.BG);
+        for (GheDTO g : ds) {
+            rows.add(g.getRowIndex());
+            if (g.getColIndex() > maxCol) maxCol = g.getColIndex();
 
-        // sort tầng tăng dần
-        byTang.keySet().stream().sorted().forEach(tang -> {
-            List<GheDTO> dsTang = byTang.get(tang);
-            tabs.addTab("Tầng " + tang, buildGrid(dsTang));
-        });
+            map.computeIfAbsent(g.getRowIndex(), k -> new HashMap<>())
+                    .put(g.getColIndex(), g);
+        }
 
-        return tabs;
-    }
+        int aisle = maxCol / 2;
 
-    private JComponent buildGrid(List<GheDTO> ds) {
-        // Bạn có thể thay layout theo máy bay/hạng ghế sau.
-        // Hiện tại: auto grid dựa trên số lượng ghế.
-        int n = ds.size();
-        int cols = 6; // tạm giống demo A-F
-        int rows = (int) Math.ceil(n / (double) cols);
-
-        JPanel grid = new JPanel(new GridLayout(rows, cols, 8, 8));
+        JPanel grid = new JPanel(new GridLayout(rows.size() + 1, maxCol + 2, 5, 5));
         grid.setBackground(UserTheme.CARD);
         grid.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
 
-        for (GheDTO g : ds.stream()
-                .sorted((a,b) -> String.valueOf(a.getTenGhe()).compareToIgnoreCase(String.valueOf(b.getTenGhe())))
-                .collect(Collectors.toList())) {
+        // 🔥 Header
+        grid.add(new JLabel(""));
+        for (int c = 1; c <= maxCol; c++) {
+            char colLetter = (char) ('A' + c - 1);
+            grid.add(new JLabel(String.valueOf(colLetter), SwingConstants.CENTER));
+            if (c == aisle) grid.add(new JLabel(""));
+        }
 
-            String seatText = g.getTenGhe(); // ví dụ: E.A1
+       List<Integer> gheDaChon = new ArrayList<>();
 
-            JButton b = new JButton(seatText);
-            b.setFocusPainted(false);
-            if (GHE_ID_DANG_CHON != null && GHE_ID_DANG_CHON.equals(g.getGheId())) {
+for (int i = 0; i < TempVeStore.getAll().size(); i++) {
+    if (i == TempVeStore.CURRENT_INDEX) continue; // bỏ ghế đang edit
+    gheDaChon.add(TempVeStore.getAll().get(i).getGheId());
+}
+
+        // 🔥 Render
+        for (int r : rows) {
+            grid.add(new JLabel(String.valueOf(r), SwingConstants.CENTER));
+
+            Map<Integer, GheDTO> colMap = map.get(r);
+
+            for (int c = 1; c <= maxCol; c++) {
+                GheDTO g = (colMap != null) ? colMap.get(c) : null;
+
+                if (g == null) {
+                    grid.add(new JLabel(""));
+                } else {
+
+                    JButton b = new JButton(g.getTenGhe());
+                    b.setFocusPainted(false);
+
+                    // ❌ disable
+                    if (g.isDaDat()
+                            || (g.getTrangThai() != null && g.getTrangThai() == 0)
+                            || gheDaChon.contains(g.getGheId())) {
+
+                        b.setEnabled(false);
+                        b.setBackground(new Color(70, 70, 70));
+                        b.setForeground(Color.LIGHT_GRAY);
+
+                    } else {
+
+                        // 🔥 màu theo hạng ghế
+                        colorSeat(b, g.getHangGheId());
+                        b.setForeground(Color.BLACK);
+
+                        b.addActionListener(e -> {
+
+                            // 🔥 reset lại màu đúng (không set trắng)
+                            for (Component comp : grid.getComponents()) {
+                                if (comp instanceof JButton) {
+                                    JButton btn = (JButton) comp;
+
+                                    for (GheDTO seat : ds) {
+                                        if (seat.getTenGhe().equals(btn.getText())) {
+                                            colorSeat(btn, seat.getHangGheId());
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+
+                            // 🔥 chọn ghế
+                            GHE_ID_DANG_CHON = g.getGheId();
+                            GHE_TEXT_DA_CHON = "Ghế " + g.getTenGhe();
+
+                            b.setBackground(Color.GREEN);
+                            lblInfo.setText("Đã chọn: " + g.getTenGhe());
+                        });
+                    }
+// highlight ghế đang chọn
+if (GHE_ID_DANG_CHON != null && g.getGheId() == GHE_ID_DANG_CHON) {
     b.setBackground(Color.GREEN);
 }
+                    grid.add(b);
+                }
 
-            if (g.isDaDat() || (g.getTrangThai() != null && g.getTrangThai() == 0)) {
-                b.setEnabled(false);
-                b.setBackground(new Color(70, 70, 70));
-                b.setForeground(Color.LIGHT_GRAY);
-            } else {
-                b.setBackground(Color.WHITE);
-                b.setForeground(UserTheme.ACCENT);
-                b.addActionListener(e -> {
-
-    // reset tất cả ghế về trắng
-   Container parent = b.getParent();
-while (!(parent instanceof JPanel)) {
-    parent = parent.getParent();
-}
-
-for (Component c : parent.getComponents()) {
-    if (c instanceof JButton) {
-        JButton btn = (JButton) c;
-        btn.setBackground(Color.WHITE);
-    }
-}
-
-    // set ghế đang chọn
-    GHE_ID_DANG_CHON = g.getGheId();
-    b.setBackground(Color.GREEN);
-
-    GHE_TEXT_DA_CHON = "Tầng " + (g.getTang() == null ? 1 : g.getTang()) + " - " + seatText;
-    lblInfo.setText("Đã chọn: " + seatText);
-});
+                if (c == aisle) grid.add(new JLabel(""));
             }
-
-            grid.add(b);
         }
 
         return new JScrollPane(grid);
+    }
+
+    private void colorSeat(JButton btn, Integer hangGheId) {
+        if (hangGheId == null) return;
+
+        switch (hangGheId) {
+            case 3:
+                btn.setBackground(new Color(255, 180, 180)); break;
+            case 2:
+                btn.setBackground(new Color(255, 220, 150)); break;
+            case 4:
+                btn.setBackground(new Color(210, 255, 210)); break;
+            case 1:
+                btn.setBackground(new Color(200, 230, 255)); break;
+            default:
+                btn.setBackground(Color.WHITE);
+        }
     }
 
     private JComponent buildActions() {
@@ -143,12 +182,18 @@ for (Component c : parent.getComponents()) {
         JButton next = primaryButton("Tiếp tục →");
 
         back.addActionListener(e -> nav.show("KQ_CHUYEN"));
+
         next.addActionListener(e -> {
-                if (GHE_ID_DANG_CHON == null) {
-        JOptionPane.showMessageDialog(this, "Bạn chưa chọn ghế.");
-        return;
-}
+            if (GHE_ID_DANG_CHON == null) {
+                JOptionPane.showMessageDialog(this, "Bạn chưa chọn ghế.");
+                return;
+            }
             nav.show("HANH_KHACH");
+
+Component comp = nav.get("HANH_KHACH");
+if (comp instanceof PnlThongTinHanhKhach) {
+    ((PnlThongTinHanhKhach) comp).reload();
+}
         });
 
         p.add(back);
@@ -175,16 +220,54 @@ for (Component c : parent.getComponents()) {
         return b;
     }
 
-    /** Gọi method này mỗi khi panel được show */
     public void reload() {
+
+    DatVeBUS.ThongTinHanhKhachVaGhe current = TempVeStore.getCurrent();
+
+    if (current != null) {
+        GHE_ID_DANG_CHON = current.getGheId();
+        lblInfo.setText("Đã chọn: " + current.getGheId());
+    } else {
         GHE_ID_DANG_CHON = null;
         lblInfo.setText("Chọn ghế");
+    }
 
-        remove(seatArea);               // xóa panel ghế cũ
-        seatArea = buildSeatTabs();     // build lại với ID mới
-        add(seatArea, BorderLayout.CENTER);
+    remove(seatArea);
+    seatArea = buildSeatMap();
+    add(seatArea, BorderLayout.CENTER);
 
-        revalidate();                   // ← bắt buộc để Swing vẽ lại
-        repaint();
+    revalidate();
+    repaint();
+}
+
+    private JPanel buildLegend() {
+        JPanel p = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        p.setBorder(BorderFactory.createTitledBorder("Chú thích hạng ghế"));
+        p.setBackground(UserTheme.BG);
+
+        p.add(colorBox(new Color(255, 180, 180), "First Class"));
+        p.add(colorBox(new Color(255, 220, 150), "Business"));
+        p.add(colorBox(new Color(210, 255, 210), "Premium Economy"));
+        p.add(colorBox(new Color(200, 230, 255), "Economy"));
+        p.add(colorBox(new Color(70, 70, 70), "Đã đặt / Không khả dụng"));
+        p.add(colorBox(Color.GREEN, "Đang chọn"));
+
+        return p;
+    }
+
+    private JPanel colorBox(Color c, String text) {
+        JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        p.setOpaque(false);
+
+        JLabel box = new JLabel();
+        box.setOpaque(true);
+        box.setBackground(c);
+        box.setPreferredSize(new Dimension(20, 20));
+        box.setBorder(BorderFactory.createLineBorder(Color.GRAY));
+
+        p.add(box);
+        p.add(new JLabel(text));
+
+        return p;
     }
 }

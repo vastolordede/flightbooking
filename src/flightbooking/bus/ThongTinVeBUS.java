@@ -1,5 +1,7 @@
 package flightbooking.bus;
 
+import java.util.List;
+
 import flightbooking.dao.ThongTinVeDAO;
 import flightbooking.dto.ThongTinVeDTO;
 
@@ -18,4 +20,7 @@ public class ThongTinVeBUS {
 
         return t;
     }
+    public List<ThongTinVeDTO> getSimpleByKhachHang(int khachHangId) {
+    return dao.getSimpleByKhachHang(khachHangId);
+}
 }

@@ -164,7 +164,8 @@ public class PnlDatVeAdmin extends JPanel {
     taiKhoanNhanVienId,  // ✔ nhân viên
     chuyenBayId,
     items,
-    (String) cbPay.getSelectedItem()
+    (String) cbPay.getSelectedItem(),
+    0
 );
 
             JOptionPane.showMessageDialog(this, "✓ Tạo vé thành công!");

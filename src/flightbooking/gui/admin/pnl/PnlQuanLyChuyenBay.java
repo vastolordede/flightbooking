@@ -37,6 +37,7 @@ public class PnlQuanLyChuyenBay extends JPanel {
     private JButton btnDelete;
     private JButton btnGiaHang;
     private JButton btnSeatMap;
+    private JButton btnReload;
 
     // ✅ đổi sang combo máy bay
     private final JComboBox<MayBayItem> cbMayBay = new JComboBox<>();
@@ -86,15 +87,24 @@ public class PnlQuanLyChuyenBay extends JPanel {
         form.add(new JLabel("Trạng thái"));
         form.add(cbTrangThai);
 
-         btnAdd = new JButton("Thêm");
-         btnUpdate = new JButton("Sửa");
-         btnDelete = new JButton("Xóa");
-         btnSeatMap = new JButton("Sơ đồ ghế");
+        btnAdd = new JButton("Thêm");
+        btnUpdate = new JButton("Sửa");
+        btnDelete = new JButton("Xóa");
+        btnSeatMap = new JButton("Sơ đồ ghế");
+        btnReload = new JButton("Làm mới");
 
         btnAdd.addActionListener(e -> add());
         btnUpdate.addActionListener(e -> update());
         btnDelete.addActionListener(e -> delete());
         btnSeatMap.addActionListener(e -> openSeatMap());
+
+        // Gán sự kiện cho nút Reload
+        btnReload.addActionListener(e -> {
+            loadTuyenBayToCombo(); // Cập nhật lại danh sách tuyến bay mới nhất
+            loadMayBayToCombo();   // Cập nhật lại danh sách máy bay mới nhất
+            reload();              // Cập nhật lại bảng chuyến bay
+            JOptionPane.showMessageDialog(this, "Dữ liệu đã được cập nhật mới nhất!");
+        });
 
         btnGiaHang = new JButton("Giá hạng ghế");
 
@@ -104,6 +114,7 @@ btnGiaHang.addActionListener(e -> openGiaHangDialog());
         wrap.add(form, BorderLayout.CENTER);
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        actions.add(btnReload);
         actions.add(btnAdd);
         actions.add(btnUpdate);
         actions.add(btnDelete);
