@@ -4,6 +4,7 @@ import flightbooking.bus.GheGeneratorBUS;
 import flightbooking.bus.MayBayBUS;
 import flightbooking.dto.MayBayDTO;
 import flightbooking.util.ActionConstants;
+import flightbooking.util.ExcelExporter;
 import flightbooking.dao.GheDAO;
 
 import javax.swing.*;
@@ -34,6 +35,7 @@ public class PnlQuanLyMayBay extends JPanel {
     private JButton btnUpdate;
     private JButton btnDelete;
     private JButton btnGen;
+    private JButton btnExport;
 
     public PnlQuanLyMayBay() {
         setLayout(new BorderLayout(10,10));
@@ -47,42 +49,32 @@ public class PnlQuanLyMayBay extends JPanel {
     }
 
     private JComponent buildTop() {
-        JPanel wrap = new JPanel(new BorderLayout(10,10));
+    JPanel form = new JPanel(new GridBagLayout());
+    GridBagConstraints lc = makeLc(); GridBagConstraints fc = makeFc();
 
-        // Đã bỏ các ô nhập Tầng và Tổng ghế, chỉnh lại Layout cho gọn
-        JPanel form = new JPanel(new GridLayout(1, 4, 10, 10));
-        form.add(new JLabel("Tên máy bay:"));
-        form.add(txtTen);
-        form.add(new JLabel("Kiểu máy bay:"));
-        form.add(txtKieu);
+    lc.gridx=0; lc.gridy=0; form.add(makeLabel("Tên máy bay"), lc);
+    fc.gridx=1; fc.gridy=0; styleField(txtTen); form.add(txtTen, fc);
 
-         btnAdd = new JButton("Thêm");
-         btnUpdate = new JButton("Sửa");
-         btnDelete = new JButton("Xóa");
+    lc.gridx=2; lc.gridy=0; form.add(makeLabel("Kiểu máy bay"), lc);
+    fc.gridx=3; fc.gridy=0; styleField(txtKieu); form.add(txtKieu, fc);
 
-        btnAdd.addActionListener(e -> add());
-        btnUpdate.addActionListener(e -> update());
-        btnDelete.addActionListener(e -> delete());
+    btnAdd = new JButton("Thêm"); btnUpdate = new JButton("Sửa"); btnDelete = new JButton("Xóa");
+    btnGen = new JButton("Tạo ghế cho máy bay đang chọn");
+    btnAdd.addActionListener(e -> add());
+    btnUpdate.addActionListener(e -> update());
+    btnDelete.addActionListener(e -> delete());
+    btnGen.addActionListener(e -> openGenSeatDialog());
+    btnExport = new JButton("Xuất Excel");
+btnExport.addActionListener(e -> {
+    ExcelExporter.export(table, this);
+});
 
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        actions.add(btnAdd);
-        actions.add(btnUpdate);
-        actions.add(btnDelete);
-
-        btnGen = new JButton("Tạo ghế cho máy bay đang chọn");
-        btnGen.addActionListener(e -> openGenSeatDialog());
-
-        JPanel genActions = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        genActions.add(btnGen);
-
-        JPanel genWrap = new JPanel(new BorderLayout(10,10));
-        genWrap.add(genActions, BorderLayout.SOUTH);
-
-        wrap.add(form, BorderLayout.NORTH);
-        wrap.add(actions, BorderLayout.CENTER);
-        wrap.add(genWrap, BorderLayout.SOUTH);
-        return wrap;
-    }
+    JPanel wrap = wrapWithActions(form, btnAdd, btnUpdate, btnDelete, btnExport);
+    JPanel genRow = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+    genRow.add(btnGen);
+    wrap.add(genRow, BorderLayout.SOUTH);
+    return wrap;
+}
 
     private void reload() {
         model.setRowCount(0);
@@ -359,5 +351,45 @@ public class PnlQuanLyMayBay extends JPanel {
     btnDelete.setVisible(actionIds.contains(ActionConstants.XOA));
     btnGen.setVisible(actionIds.contains(ActionConstants.TAO_GHE));
     revalidate(); repaint();
+}
+
+private GridBagConstraints makeLc() {
+    GridBagConstraints lc = new GridBagConstraints();
+    lc.anchor = GridBagConstraints.WEST;
+    lc.insets = new Insets(6, 4, 6, 6);
+    return lc;
+}
+
+private GridBagConstraints makeFc() {
+    GridBagConstraints fc = new GridBagConstraints();
+    fc.fill = GridBagConstraints.HORIZONTAL;
+    fc.weightx = 1.0;
+    fc.insets = new Insets(6, 0, 6, 12);
+    return fc;
+}
+
+private JLabel makeLabel(String text) {
+    JLabel lb = new JLabel(text);
+    lb.setFont(lb.getFont().deriveFont(Font.PLAIN, 13f));
+    return lb;
+}
+
+private void styleField(JTextField field) {
+    field.setPreferredSize(new Dimension(160, 30));
+    field.setFont(field.getFont().deriveFont(13f));
+    field.setBorder(BorderFactory.createCompoundBorder(
+        BorderFactory.createLineBorder(new Color(200, 200, 200)),
+        BorderFactory.createEmptyBorder(3, 8, 3, 8)
+    ));
+}
+
+private JPanel wrapWithActions(JPanel form, JButton... buttons) {
+    JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 4));
+    for (JButton b : buttons) actions.add(b);
+    JPanel wrap = new JPanel(new BorderLayout(0, 8));
+    wrap.setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0));
+    wrap.add(form, BorderLayout.CENTER);
+    wrap.add(actions, BorderLayout.SOUTH);
+    return wrap;
 }
 }

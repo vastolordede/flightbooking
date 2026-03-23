@@ -30,15 +30,14 @@ public class PnlXacNhanDatVe extends JPanel {
     public PnlXacNhanDatVe(AppNavigator nav) {
         this.nav = nav;
 
-        setLayout(new BorderLayout(12,12));
-        setBorder(BorderFactory.createEmptyBorder(16,16,16,16));
+        setLayout(new BorderLayout(12, 12));
+        setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
         setBackground(UserTheme.BG);
 
         add(buildHeader(), BorderLayout.NORTH);
         add(buildSummary(), BorderLayout.CENTER);
         add(buildActions(), BorderLayout.SOUTH);
 
-        // 🔥 realtime update
         txtDiem.addKeyListener(new java.awt.event.KeyAdapter() {
             public void keyReleased(java.awt.event.KeyEvent e) {
                 updateTongTien();
@@ -56,12 +55,11 @@ public class PnlXacNhanDatVe extends JPanel {
     }
 
     private JComponent buildSummary() {
-
         summary.setEditable(false);
         summary.setLineWrap(true);
         summary.setWrapStyleWord(true);
         summary.setBackground(UserTheme.CARD);
-        summary.setBorder(BorderFactory.createEmptyBorder(16,16,16,16));
+        summary.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
         summary.setText("Đang tải thông tin vé...");
 
         JPanel wrapper = new JPanel(new BorderLayout());
@@ -72,14 +70,12 @@ public class PnlXacNhanDatVe extends JPanel {
 
         JPanel pointPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         pointPanel.setBackground(UserTheme.CARD);
-
         pointPanel.add(chkUsePoint);
         pointPanel.add(new JLabel("Số điểm:"));
         txtDiem.setPreferredSize(new Dimension(80, 30));
         pointPanel.add(txtDiem);
 
         wrapper.add(pointPanel, BorderLayout.SOUTH);
-
         return wrapper;
     }
 
@@ -87,28 +83,29 @@ public class PnlXacNhanDatVe extends JPanel {
         JPanel p = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         p.setOpaque(false);
 
-        JButton back = ghostButton("← Quay lại");
-        JButton addMore = ghostButton("+ Thêm vé");
-        btnDone = primaryButton("Hoàn tất");
+        // ✅ Dùng UserTheme thay vì primaryButton/ghostButton cũ
+        JButton back    = UserTheme.createOutlineButton("← Quay lại");
+        JButton addMore = UserTheme.createOutlineButton("+ Thêm vé");
+        btnDone         = UserTheme.createButton("Hoàn tất");
 
         back.addActionListener(e -> {
-    nav.show("HANH_KHACH");
+            nav.show("HANH_KHACH");
+            Component comp = nav.get("HANH_KHACH");
+            if (comp instanceof PnlThongTinHanhKhach) {
+                ((PnlThongTinHanhKhach) comp).reload();
+            }
+        });
 
-    Component comp = nav.get("HANH_KHACH");
-    if (comp instanceof PnlThongTinHanhKhach) {
-        ((PnlThongTinHanhKhach) comp).reload();
-    }
-});
         addMore.addActionListener(e -> {
-    TempVeStore.setCurrentIndex(-1); // tạo vé mới
-    nav.show("CHON_GHE");
-});
+            TempVeStore.setCurrentIndex(-1);
+            nav.show("CHON_GHE");
+        });
+
         btnDone.addActionListener(e -> datVe());
 
         p.add(back);
         p.add(addMore);
         p.add(btnDone);
-
         return p;
     }
 
@@ -122,34 +119,19 @@ public class PnlXacNhanDatVe extends JPanel {
             Integer khachHangId = SessionContext.getCurrentUserId();
             if (khachHangId == null) throw new RuntimeException("Bạn chưa đăng nhập.");
 
-            // 🔥 lấy điểm user nhập
             int diemSuDung = 0;
-
             if (chkUsePoint.isSelected()) {
-                try {
-                    diemSuDung = Integer.parseInt(txtDiem.getText());
-                } catch (Exception e) {
-                    diemSuDung = 0;
-                }
+                try { diemSuDung = Integer.parseInt(txtDiem.getText()); } catch (Exception e) { diemSuDung = 0; }
             }
 
-            datVeBUS.datVe(
-                    khachHangId,
-                    null,
-                    chuyenBayId,
-                    items,
-                    "online",
-                    diemSuDung
-            );
+            datVeBUS.datVe(khachHangId, null, chuyenBayId, items, "online", diemSuDung);
 
             JOptionPane.showMessageDialog(this, "Đặt vé thành công!");
 
-            // reload user
             KhachHangBUS bus = new KhachHangBUS();
             KhachHangDTO user = bus.getByUsername(SessionContext.getCurrentUsername());
             SessionContext.setCurrentUser(user);
 
-            // reset flow
             TempVeStore.clear();
             PnlChonGhe.GHE_ID_DANG_CHON = null;
             PnlThongTinHanhKhach.HO_TEN = "";
@@ -162,68 +144,42 @@ public class PnlXacNhanDatVe extends JPanel {
         }
     }
 
-    private JButton primaryButton(String text) {
-        JButton b = new JButton(text);
-        b.setBackground(UserTheme.PRIMARY);
-        b.setForeground(Color.WHITE);
-        b.setFocusPainted(false);
-        b.setBorder(BorderFactory.createEmptyBorder(10,16,10,16));
-        return b;
-    }
-
-    private JButton ghostButton(String text) {
-        JButton b = new JButton(text);
-        b.setBackground(UserTheme.CARD);
-        b.setForeground(UserTheme.ACCENT);
-        b.setFocusPainted(false);
-        b.setBorder(BorderFactory.createLineBorder(UserTheme.ACCENT));
-        b.setPreferredSize(new Dimension(120, 36));
-        return b;
-    }
-
     public void reload() {
+        int chuyenBayId = PnlKetQuaChuyenBay.CHUYEN_BAY_ID_CHON;
+        List<DatVeBUS.ThongTinHanhKhachVaGhe> ds = TempVeStore.getAll();
 
-    int chuyenBayId = PnlKetQuaChuyenBay.CHUYEN_BAY_ID_CHON;
-    List<DatVeBUS.ThongTinHanhKhachVaGhe> ds = TempVeStore.getAll();
-
-    if (chuyenBayId <= 0 || ds.isEmpty()) {
-        summary.setText("❌ Thiếu dữ liệu.");
-        return;
-    }
-
-    cbHanhKhach.removeAllItems();
-
-    int index = 1;
-    for (DatVeBUS.ThongTinHanhKhachVaGhe it : ds) {
-        cbHanhKhach.addItem("Hành khách " + index++);
-    }
-
-    cbHanhKhach.addActionListener(e -> {
-        int selected = cbHanhKhach.getSelectedIndex();
-
-        if (selected >= 0 && selected < ds.size()) {
-
-            // 🔥 QUAN TRỌNG
-            TempVeStore.setCurrentIndex(selected);
-
-            showSingle(ds.get(selected));
+        if (chuyenBayId <= 0 || ds.isEmpty()) {
+            summary.setText("❌ Thiếu dữ liệu.");
+            return;
         }
-    });
 
-    // 🔥 auto chọn current nếu có
-    if (TempVeStore.CURRENT_INDEX >= 0) {
-        cbHanhKhach.setSelectedIndex(TempVeStore.CURRENT_INDEX);
-    } else {
-        TempVeStore.setCurrentIndex(0);
-        cbHanhKhach.setSelectedIndex(0);
+        cbHanhKhach.removeAllItems();
+
+        int index = 1;
+        for (DatVeBUS.ThongTinHanhKhachVaGhe it : ds) {
+            cbHanhKhach.addItem("Hành khách " + index++);
+        }
+
+        cbHanhKhach.addActionListener(e -> {
+            int selected = cbHanhKhach.getSelectedIndex();
+            if (selected >= 0 && selected < ds.size()) {
+                TempVeStore.setCurrentIndex(selected);
+                showSingle(ds.get(selected));
+            }
+        });
+
+        if (TempVeStore.CURRENT_INDEX >= 0) {
+            cbHanhKhach.setSelectedIndex(TempVeStore.CURRENT_INDEX);
+        } else {
+            TempVeStore.setCurrentIndex(0);
+            cbHanhKhach.setSelectedIndex(0);
+        }
+
+        showSingle(ds.get(cbHanhKhach.getSelectedIndex()));
+        updateTongTien();
     }
-
-    showSingle(ds.get(cbHanhKhach.getSelectedIndex()));
-    updateTongTien();
-}
 
     private void showSingle(DatVeBUS.ThongTinHanhKhachVaGhe it) {
-
         int chuyenBayId = PnlKetQuaChuyenBay.CHUYEN_BAY_ID_CHON;
         ThongTinVeBUS bus = new ThongTinVeBUS();
 
@@ -252,7 +208,6 @@ public class PnlXacNhanDatVe extends JPanel {
     }
 
     private void updateTongTien() {
-
         if (btnDone == null) return;
 
         int chuyenBayId = PnlKetQuaChuyenBay.CHUYEN_BAY_ID_CHON;
@@ -264,35 +219,21 @@ public class PnlXacNhanDatVe extends JPanel {
         }
 
         BigDecimal tong = BigDecimal.ZERO;
-
         for (DatVeBUS.ThongTinHanhKhachVaGhe it : items) {
             tong = tong.add(datVeBUS.tinhGiaGhe(chuyenBayId, it.getGheId()));
         }
 
         Integer userId = SessionContext.getCurrentUserId();
-
         if (userId != null && chkUsePoint.isSelected()) {
-
             int diemSuDung = 0;
-
-            try {
-                diemSuDung = Integer.parseInt(txtDiem.getText());
-            } catch (Exception e) {
-                diemSuDung = 0;
-            }
+            try { diemSuDung = Integer.parseInt(txtDiem.getText()); } catch (Exception e) { diemSuDung = 0; }
 
             int diemHienTai = new KhachHangBUS().getDiem(userId);
+            if (diemSuDung > diemHienTai) diemSuDung = diemHienTai;
 
-            if (diemSuDung > diemHienTai) {
-                diemSuDung = diemHienTai;
-            }
-
-            BigDecimal giam = BigDecimal.valueOf(diemSuDung * 10);
+            BigDecimal giam = BigDecimal.valueOf(diemSuDung * 10L);
             tong = tong.subtract(giam);
-
-            if (tong.compareTo(BigDecimal.ZERO) < 0) {
-                tong = BigDecimal.ZERO;
-            }
+            if (tong.compareTo(BigDecimal.ZERO) < 0) tong = BigDecimal.ZERO;
         }
 
         btnDone.setText("Hoàn tất (" + tong + " VND)");

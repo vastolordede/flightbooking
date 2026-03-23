@@ -29,11 +29,24 @@ public class AccountBUS {
 
     AccountDTO account = accountDao.getAccountByUsername(tenDangNhap);
 
-    if (account != null
-            && account.getMatKhauMaHoa().equals(matKhau)
-            && account.isDangHoatDong()) {
+    if (account == null || !account.isDangHoatDong()) {
+        return null;
+    }
 
-        
+    String stored = account.getMatKhauMaHoa();
+    String hashedInput = flightbooking.util.PasswordUtil.hash(matKhau);
+
+    // 1. Check hash (chuẩn)
+    if (stored.equals(hashedInput)) {
+        return account;
+    }
+
+    // 2. Check plain (account cũ)
+    if (stored.equals(matKhau)) {
+
+        // 🔥 BONUS: tự động upgrade lên hash luôn
+        String newHash = hashedInput;
+        accountDao.updatePassword(account.getTaiKhoanId(), newHash);
 
         return account;
     }
@@ -65,5 +78,29 @@ public class AccountBUS {
     // 3. Gọi DAO để lưu
     boolean success = accountDao.insertAccount(account);
     return success ? null : "Lỗi hệ thống: Không thể tạo tài khoản lúc này.";
+}
+public String changePassword(int taiKhoanId, String oldPass, String newPass) {
+
+    AccountDTO acc = accountDao.getAccountByUsername(
+        flightbooking.util.SessionContext.getAdminUsername()
+    );
+
+    if (acc == null) return "Không tìm thấy tài khoản";
+
+    if (!acc.getMatKhauMaHoa()
+            .equals(flightbooking.util.PasswordUtil.hash(oldPass))) {
+        return "Mật khẩu cũ sai";
+    }
+
+    if (newPass.length() < 3) {
+        return "Mật khẩu mới quá yếu";
+    }
+
+    boolean ok = accountDao.updatePassword(
+        taiKhoanId,
+        flightbooking.util.PasswordUtil.hash(newPass)
+    );
+
+    return ok ? null : "Lỗi hệ thống";
 }
 }

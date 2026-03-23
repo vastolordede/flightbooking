@@ -142,4 +142,22 @@ public boolean enableByNhanVienId(int nvId) {
 
     return false;
 }
+public boolean updatePassword(int taiKhoanId, String newPass) {
+
+    String sql = "UPDATE taikhoannhanvien SET matkhau_mahoa=? WHERE taikhoannhanvien_id=?";
+
+    try (Connection conn = DriverManager.getConnection(URL, USER_DB, PASS_DB);
+         PreparedStatement ps = conn.prepareStatement(sql)) {
+
+        ps.setString(1, newPass);
+        ps.setInt(2, taiKhoanId);
+
+        return ps.executeUpdate() > 0;
+
+    } catch (Exception e) {
+        System.err.println("updatePassword failed: " + e.getMessage());
+    }
+
+    return false;
+}
 }

@@ -29,8 +29,8 @@ public class PnlKetQuaChuyenBay extends JPanel {
     public PnlKetQuaChuyenBay(AppNavigator nav) {
         this.nav = nav;
 
-        setLayout(new BorderLayout(12,12));
-        setBorder(BorderFactory.createEmptyBorder(16,16,16,16));
+        setLayout(new BorderLayout(12, 12));
+        setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
         setBackground(UserTheme.BG);
 
         add(buildHeader(), BorderLayout.NORTH);
@@ -51,7 +51,7 @@ public class PnlKetQuaChuyenBay extends JPanel {
         JLabel sub = new JLabel("Chọn 1 chuyến rồi bấm 'Chọn ghế'");
         sub.setForeground(UserTheme.ACCENT);
 
-        JPanel g = new JPanel(new GridLayout(2,1));
+        JPanel g = new JPanel(new GridLayout(2, 1));
         g.setOpaque(false);
         g.add(title);
         g.add(sub);
@@ -64,8 +64,9 @@ public class PnlKetQuaChuyenBay extends JPanel {
         JPanel p = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         p.setOpaque(false);
 
-        JButton back = ghostButton("← Quay lại");
-        JButton next = primaryButton("Chọn ghế →");
+        // ✅ Dùng UserTheme thay vì private methods cũ
+        JButton back = UserTheme.createOutlineButton("← Quay lại");
+        JButton next = UserTheme.createButton("Chọn ghế →");
 
         back.addActionListener(e -> nav.show("TIM_CHUYEN"));
         next.addActionListener(e -> chonChuyen());
@@ -75,67 +76,48 @@ public class PnlKetQuaChuyenBay extends JPanel {
         return p;
     }
 
-    private JButton primaryButton(String text) {
-        JButton b = new JButton(text);
-        b.setBackground(UserTheme.PRIMARY);
-        b.setForeground(Color.WHITE);
-        b.setFocusPainted(false);
-        b.setBorder(BorderFactory.createEmptyBorder(10,16,10,16));
-        return b;
-    }
-
-    private JButton ghostButton(String text) {
-        JButton b = new JButton(text);
-        b.setBackground(UserTheme.CARD);
-        b.setForeground(UserTheme.ACCENT);
-        b.setFocusPainted(false);
-        b.setBorder(BorderFactory.createLineBorder(UserTheme.ACCENT));
-        b.setPreferredSize(new Dimension(120, 36));
-        return b;
-    }
-
     public void reload() {
-    model.setRowCount(0);
+        model.setRowCount(0);
 
-    int di = PnlTimChuyenBay.SANBAY_DI_ID;
-    int den = PnlTimChuyenBay.SANBAY_DEN_ID;
-    String ngayStr = PnlTimChuyenBay.NGAY;
+        int di = PnlTimChuyenBay.SANBAY_DI_ID;
+        int den = PnlTimChuyenBay.SANBAY_DEN_ID;
+        String ngayStr = PnlTimChuyenBay.NGAY;
 
-    if (di <= 0 || den <= 0 || ngayStr == null || ngayStr.isBlank()) return;
+        if (di <= 0 || den <= 0 || ngayStr == null || ngayStr.isBlank()) return;
 
-    LocalDate ngay = LocalDate.parse(ngayStr);
+        
+LocalDate ngay = LocalDate.parse(ngayStr);
 
-    List<ChuyenBayDTO> list = chuyenBayBUS.timChuyen(di, den, ngay);
+// ✅ dùng hàm mới
+List<ChuyenBayDTO> list = chuyenBayBUS.timChuyenTheoNgay(di, den, ngay);
 
-    for (ChuyenBayDTO c : list) {
-        String tuyen =
-                (c.getSanBayDiTen() != null && c.getSanBayDenTen() != null)
-                        ? (c.getSanBayDiTen() + " → " + c.getSanBayDenTen())
-                        : ("Tuyến #" + c.getTuyenBayId());
+        for (ChuyenBayDTO c : list) {
+            String tuyen =
+                    (c.getSanBayDiTen() != null && c.getSanBayDenTen() != null)
+                            ? (c.getSanBayDiTen() + " → " + c.getSanBayDenTen())
+                            : ("Tuyến #" + c.getTuyenBayId());
 
-        model.addRow(new Object[]{
-                c.getChuyenBayId(),
-                tuyen,
-                c.getGioKhoiHanh(),
-                c.getGioDen(),
-                c.getTrangThai()
-        });
+            model.addRow(new Object[]{
+                    c.getChuyenBayId(),
+                    tuyen,
+                    c.getGioKhoiHanh(),
+                    c.getGioDen(),
+                    c.getTrangThai()
+            });
+        }
     }
-}
 
     private void chonChuyen() {
-        
         int row = table.getSelectedRow();
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Bạn hãy chọn 1 chuyến bay.");
             return;
         }
         CHUYEN_BAY_ID_CHON = Integer.parseInt(String.valueOf(model.getValueAt(row, 0)));
-        System.out.println("CHỌN CHUYẾN: " + CHUYEN_BAY_ID_CHON);
         nav.show("CHON_GHE");
         Component comp = nav.get("CHON_GHE");
-    if (comp instanceof PnlChonGhe) {
-        ((PnlChonGhe) comp).reload();
-    }
+        if (comp instanceof PnlChonGhe) {
+            ((PnlChonGhe) comp).reload();
+        }
     }
 }

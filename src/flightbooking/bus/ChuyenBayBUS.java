@@ -59,4 +59,11 @@ public class ChuyenBayBUS {
             throw new RuntimeException("Lỗi findById: " + e.getMessage(), e);
         }
     }
+    public List<ChuyenBayDTO> timChuyenTheoNgay(int sanBayDiId, int sanBayDenId, LocalDate ngay) {
+    try {
+        return dao.searchByNgay(sanBayDiId, sanBayDenId, ngay);
+    } catch (SQLException e) {
+        throw new RuntimeException("Lỗi timChuyenTheoNgay: " + e.getMessage(), e);
+    }
+}
 }

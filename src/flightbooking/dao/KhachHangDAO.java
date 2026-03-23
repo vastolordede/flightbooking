@@ -83,7 +83,7 @@
                 PreparedStatement ps = c.prepareStatement(sql)) {
 
                 ps.setString(1, email.trim());
-                ps.setString(2, pass);
+                ps.setString(2, flightbooking.util.PasswordUtil.hash(pass));
 
                 try (ResultSet rs = ps.executeQuery()) {
                     return rs.next();
@@ -222,4 +222,18 @@
             throw new RuntimeException(e);
         }
     }
+    public void updatePassword(int id, String newHash) {
+    String sql = "UPDATE taikhoankhachhang SET matkhau_mahoa = ? WHERE taikhoankhachhang_id = ?";
+
+    try (Connection c = getConnection();
+         PreparedStatement ps = c.prepareStatement(sql)) {
+
+        ps.setString(1, newHash);
+        ps.setInt(2, id);
+        ps.executeUpdate();
+
+    } catch (SQLException e) {
+        throw new RuntimeException("updatePassword failed", e);
+    }
+}
     }

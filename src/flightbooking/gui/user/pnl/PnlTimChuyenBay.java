@@ -7,6 +7,7 @@ import flightbooking.gui.user.theme.UserTheme;
 
 import javax.swing.*;
 import java.awt.*;
+import java.time.LocalDate;
 import java.util.List;
 
 public class PnlTimChuyenBay extends JPanel {
@@ -16,7 +17,9 @@ public class PnlTimChuyenBay extends JPanel {
 
     private final JComboBox<Item> cbDi = new JComboBox<>();
     private final JComboBox<Item> cbDen = new JComboBox<>();
-    private final JTextField txtNgay = new JTextField("2026-02-05"); // demo
+    private final JSpinner spNgay = new JSpinner(
+        new SpinnerDateModel()
+);
 
     public static int SANBAY_DI_ID = -1;
     public static int SANBAY_DEN_ID = -1;
@@ -25,9 +28,10 @@ public class PnlTimChuyenBay extends JPanel {
     public PnlTimChuyenBay(AppNavigator nav) {
         this.nav = nav;
         setLayout(new BorderLayout(12, 12));
-        setBorder(BorderFactory.createEmptyBorder(16,16,16,16));
+        setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
         setBackground(UserTheme.BG);
-
+JSpinner.DateEditor editor = new JSpinner.DateEditor(spNgay, "yyyy-MM-dd");
+spNgay.setEditor(editor);
         add(buildCard(), BorderLayout.NORTH);
         add(buildHero(), BorderLayout.CENTER);
 
@@ -45,7 +49,7 @@ public class PnlTimChuyenBay extends JPanel {
         JLabel sub = new JLabel("Chọn điểm đi, điểm đến và ngày bay");
         sub.setForeground(UserTheme.ACCENT);
 
-        JPanel top = new JPanel(new GridLayout(2,1));
+        JPanel top = new JPanel(new GridLayout(2, 1));
         top.setOpaque(false);
         top.add(title);
         top.add(sub);
@@ -57,7 +61,7 @@ public class PnlTimChuyenBay extends JPanel {
     private JPanel buildCard() {
         JPanel card = new JPanel(new GridLayout(3, 2, 12, 12));
         card.setBackground(UserTheme.CARD);
-        card.setBorder(BorderFactory.createEmptyBorder(16,16,16,16));
+        card.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
 
         card.add(label("Sân bay đi"));
         card.add(cbDi);
@@ -66,12 +70,13 @@ public class PnlTimChuyenBay extends JPanel {
         card.add(cbDen);
 
         card.add(label("Ngày bay (yyyy-MM-dd)"));
-        card.add(txtNgay);
+        card.add(spNgay);
 
-        JButton btn = primaryButton("Tìm chuyến");
+        // ✅ Dùng UserTheme.createButton thay vì primaryButton() cũ
+        JButton btn = UserTheme.createButton("Tìm chuyến");
         btn.addActionListener(e -> timChuyen());
 
-        JPanel wrap = new JPanel(new BorderLayout(12,12));
+        JPanel wrap = new JPanel(new BorderLayout(12, 12));
         wrap.setOpaque(false);
         wrap.add(card, BorderLayout.CENTER);
 
@@ -89,14 +94,7 @@ public class PnlTimChuyenBay extends JPanel {
         return lb;
     }
 
-    private JButton primaryButton(String text) {
-        JButton b = new JButton(text);
-        b.setBackground(UserTheme.PRIMARY);
-        b.setForeground(Color.WHITE);
-        b.setFocusPainted(false);
-        b.setBorder(BorderFactory.createEmptyBorder(10,16,10,16));
-        return b;
-    }
+    // ❌ Đã xóa primaryButton() cũ — không dùng nữa
 
     private void loadSanBay() {
         cbDi.removeAllItems();
@@ -112,7 +110,19 @@ public class PnlTimChuyenBay extends JPanel {
     private void timChuyen() {
         Item di = (Item) cbDi.getSelectedItem();
         Item den = (Item) cbDen.getSelectedItem();
-        String ngay = txtNgay.getText().trim();
+        java.util.Date date = (java.util.Date) spNgay.getValue();
+
+String ngay = date.toInstant()
+        .atZone(java.time.ZoneId.systemDefault())
+        .toLocalDate()
+        .toString(); // vẫn giữ String cho code cũ
+
+try {
+    LocalDate.parse(ngay); // test format
+} catch (Exception e) {
+    JOptionPane.showMessageDialog(this, "Ngày không hợp lệ (yyyy-MM-dd)");
+    return;
+}
 
         if (di == null || den == null || ngay.isEmpty()) return;
         if (di.id == den.id) {
@@ -126,12 +136,10 @@ public class PnlTimChuyenBay extends JPanel {
 
         nav.show("KQ_CHUYEN");
 
-// ép reload lại bảng
-Component comp = nav.get("KQ_CHUYEN");
-if (comp instanceof PnlKetQuaChuyenBay) {
-    ((PnlKetQuaChuyenBay) comp).reload();
-}
-
+        Component comp = nav.get("KQ_CHUYEN");
+        if (comp instanceof PnlKetQuaChuyenBay) {
+            ((PnlKetQuaChuyenBay) comp).reload();
+        }
     }
 
     private static class Item {

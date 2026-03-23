@@ -180,4 +180,35 @@ public class ChuyenBayDAO extends BaseDAO {
     }
     return list;
 }
+public List<ChuyenBayDTO> searchByNgay(int sanBayDiId, int sanBayDenId, LocalDate ngay) throws SQLException {
+    String sql =
+            "SELECT cb.chuyenbay_id, cb.tuyenbay_id, cb.hanghangkhong_id, cb.maybay_id, " +
+            "cb.giokhoihanh, cb.gioden, cb.trangthai, " +
+            "tb.sodam AS sodam, " +
+            "sbd.tensanbay AS sanbay_di_ten, " +
+            "sbdn.tensanbay AS sanbay_den_ten " +
+            "FROM chuyenbay cb " +
+            "JOIN tuyenbay tb ON tb.tuyenbay_id = cb.tuyenbay_id " +
+            "JOIN sanbay sbd ON sbd.sanbay_id = tb.sanbaydi_id " +
+            "JOIN sanbay sbdn ON sbdn.sanbay_id = tb.sanbayden_id " +
+            "WHERE tb.sanbaydi_id = ? " +
+            "AND tb.sanbayden_id = ? " +
+            "AND cb.trangthai = 1 " +
+            "AND DATE(cb.giokhoihanh) = ? " + // ✅ filter ngày
+            "ORDER BY cb.giokhoihanh";
+
+    List<ChuyenBayDTO> list = new ArrayList<>();
+    try (Connection c = getConnection();
+         PreparedStatement ps = c.prepareStatement(sql)) {
+
+        ps.setInt(1, sanBayDiId);
+        ps.setInt(2, sanBayDenId);
+        ps.setDate(3, Date.valueOf(ngay)); // ✅ truyền ngày
+
+        try (ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) list.add(map(rs));
+        }
+    }
+    return list;
+}
 }

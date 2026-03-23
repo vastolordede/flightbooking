@@ -68,7 +68,9 @@ public class KhachHangBUS {
 
         // Gọi xuống DAO để thực hiện Insert vào Neon
         try {
-            if (khDAO.register(hoTen.trim(), sdt.trim(), user.trim(), pass)) {
+            String hashed = flightbooking.util.PasswordUtil.hash(pass);
+
+if (khDAO.register(hoTen.trim(), sdt.trim(), user.trim(), hashed)) {
                 UiUtil.showInfo(parent, "✓ Chúc mừng! Bạn đã đăng ký tài khoản thành công.");
                 return true;
             } else {
@@ -85,25 +87,47 @@ public class KhachHangBUS {
      * Xử lý logic Đăng nhập khách hàng
      */
     public boolean dangNhap(Component parent, String user, String pass) {
-        if (user == null || user.trim().isEmpty() ||
-            pass == null || pass.isEmpty()) {
-            UiUtil.showInfo(parent, "Tên đăng nhập và mật khẩu không được để trống!");
+    if (user == null || user.trim().isEmpty() ||
+        pass == null || pass.isEmpty()) {
+        UiUtil.showInfo(parent, "Tên đăng nhập và mật khẩu không được để trống!");
+        return false;
+    }
+
+    try {
+        KhachHangDTO kh = khDAO.findByUsername(user.trim());
+
+        // ❌ không tồn tại
+        if (kh == null || !kh.isDangHoatDong()) {
+            UiUtil.showInfo(parent, "✗ Tài khoản hoặc mật khẩu không chính xác!");
             return false;
         }
 
-        try {
-            // Kiểm tra thông tin trong bảng taikhoankhachhang
-            if (khDAO.checkLogin(user.trim(), pass)) {
-                return true; // Thành công
-            } else {
-                UiUtil.showInfo(parent, "✗ Tài khoản hoặc mật khẩu không chính xác!");
-                return false;
-            }
-        } catch (Exception ex) {
-            UiUtil.showInfo(parent, "✗ Lỗi hệ thống: " + ex.getMessage());
-            return false;
+        String stored = kh.getMatKhauMaHoa(); // ✅ đúng field của bạn
+        String hashedInput = flightbooking.util.PasswordUtil.hash(pass);
+
+        // ✅ 1. Check hash (chuẩn)
+        if (stored.equals(hashedInput)) {
+            return true;
         }
+
+        // ✅ 2. Check plain (account cũ)
+        if (stored.equals(pass)) {
+
+            // 🔥 upgrade lên hash
+            khDAO.updatePassword(kh.getTaiKhoanKhachHangId(), hashedInput);
+
+            return true;
+        }
+
+        // ❌ sai mật khẩu
+        UiUtil.showInfo(parent, "✗ Tài khoản hoặc mật khẩu không chính xác!");
+        return false;
+
+    } catch (Exception ex) {
+        UiUtil.showInfo(parent, "✗ Lỗi hệ thống: " + ex.getMessage());
+        return false;
     }
+}
 
     /**
      * Kiểm tra tài khoản có tồn tại không

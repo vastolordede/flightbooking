@@ -181,7 +181,7 @@ public void themNhanVienVaTaiKhoan(
     AccountDTO acc = new AccountDTO();
     acc.setNhanVienId(nvId);
     acc.setTenDangNhap(username);
-    acc.setMatKhauMaHoa(password);
+    acc.setMatKhauMaHoa(flightbooking.util.PasswordUtil.hash(password));
     acc.setNhomQuyenId(nhomQuyenId);
     acc.setDangHoatDong(true);
 

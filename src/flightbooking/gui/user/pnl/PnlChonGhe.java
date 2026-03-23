@@ -10,7 +10,6 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.*;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class PnlChonGhe extends JPanel {
 
@@ -37,10 +36,8 @@ public class PnlChonGhe extends JPanel {
 
         JPanel south = new JPanel(new BorderLayout());
         south.setOpaque(false);
-
         south.add(buildLegend(), BorderLayout.CENTER);
         south.add(buildActions(), BorderLayout.SOUTH);
-
         add(south, BorderLayout.SOUTH);
     }
 
@@ -54,7 +51,6 @@ public class PnlChonGhe extends JPanel {
             return empty;
         }
 
-        // 🔥 Map row-col
         Map<Integer, Map<Integer, GheDTO>> map = new HashMap<>();
         TreeSet<Integer> rows = new TreeSet<>();
         int maxCol = 0;
@@ -62,7 +58,6 @@ public class PnlChonGhe extends JPanel {
         for (GheDTO g : ds) {
             rows.add(g.getRowIndex());
             if (g.getColIndex() > maxCol) maxCol = g.getColIndex();
-
             map.computeIfAbsent(g.getRowIndex(), k -> new HashMap<>())
                     .put(g.getColIndex(), g);
         }
@@ -73,7 +68,7 @@ public class PnlChonGhe extends JPanel {
         grid.setBackground(UserTheme.CARD);
         grid.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
 
-        // 🔥 Header
+        // Header
         grid.add(new JLabel(""));
         for (int c = 1; c <= maxCol; c++) {
             char colLetter = (char) ('A' + c - 1);
@@ -81,17 +76,14 @@ public class PnlChonGhe extends JPanel {
             if (c == aisle) grid.add(new JLabel(""));
         }
 
-       List<Integer> gheDaChon = new ArrayList<>();
+        List<Integer> gheDaChon = new ArrayList<>();
+        for (int i = 0; i < TempVeStore.getAll().size(); i++) {
+            if (i == TempVeStore.CURRENT_INDEX) continue;
+            gheDaChon.add(TempVeStore.getAll().get(i).getGheId());
+        }
 
-for (int i = 0; i < TempVeStore.getAll().size(); i++) {
-    if (i == TempVeStore.CURRENT_INDEX) continue; // bỏ ghế đang edit
-    gheDaChon.add(TempVeStore.getAll().get(i).getGheId());
-}
-
-        // 🔥 Render
         for (int r : rows) {
             grid.add(new JLabel(String.valueOf(r), SwingConstants.CENTER));
-
             Map<Integer, GheDTO> colMap = map.get(r);
 
             for (int c = 1; c <= maxCol; c++) {
@@ -100,11 +92,12 @@ for (int i = 0; i < TempVeStore.getAll().size(); i++) {
                 if (g == null) {
                     grid.add(new JLabel(""));
                 } else {
-
+                    // ✅ Ghế dùng JButton thường vì cần màu động theo trạng thái
                     JButton b = new JButton(g.getTenGhe());
                     b.setFocusPainted(false);
+                    b.setContentAreaFilled(true); // ghế cần fill màu theo trạng thái
+                    b.setBorderPainted(true);
 
-                    // ❌ disable
                     if (g.isDaDat()
                             || (g.getTrangThai() != null && g.getTrangThai() == 0)
                             || gheDaChon.contains(g.getGheId())) {
@@ -114,18 +107,14 @@ for (int i = 0; i < TempVeStore.getAll().size(); i++) {
                         b.setForeground(Color.LIGHT_GRAY);
 
                     } else {
-
-                        // 🔥 màu theo hạng ghế
                         colorSeat(b, g.getHangGheId());
                         b.setForeground(Color.BLACK);
 
                         b.addActionListener(e -> {
-
-                            // 🔥 reset lại màu đúng (không set trắng)
+                            // Reset màu tất cả ghế
                             for (Component comp : grid.getComponents()) {
                                 if (comp instanceof JButton) {
                                     JButton btn = (JButton) comp;
-
                                     for (GheDTO seat : ds) {
                                         if (seat.getTenGhe().equals(btn.getText())) {
                                             colorSeat(btn, seat.getHangGheId());
@@ -135,18 +124,17 @@ for (int i = 0; i < TempVeStore.getAll().size(); i++) {
                                 }
                             }
 
-                            // 🔥 chọn ghế
                             GHE_ID_DANG_CHON = g.getGheId();
                             GHE_TEXT_DA_CHON = "Ghế " + g.getTenGhe();
-
                             b.setBackground(Color.GREEN);
                             lblInfo.setText("Đã chọn: " + g.getTenGhe());
                         });
                     }
-// highlight ghế đang chọn
-if (GHE_ID_DANG_CHON != null && g.getGheId() == GHE_ID_DANG_CHON) {
-    b.setBackground(Color.GREEN);
-}
+
+                    if (GHE_ID_DANG_CHON != null && g.getGheId() == GHE_ID_DANG_CHON) {
+                        b.setBackground(Color.GREEN);
+                    }
+
                     grid.add(b);
                 }
 
@@ -159,18 +147,12 @@ if (GHE_ID_DANG_CHON != null && g.getGheId() == GHE_ID_DANG_CHON) {
 
     private void colorSeat(JButton btn, Integer hangGheId) {
         if (hangGheId == null) return;
-
         switch (hangGheId) {
-            case 3:
-                btn.setBackground(new Color(255, 180, 180)); break;
-            case 2:
-                btn.setBackground(new Color(255, 220, 150)); break;
-            case 4:
-                btn.setBackground(new Color(210, 255, 210)); break;
-            case 1:
-                btn.setBackground(new Color(200, 230, 255)); break;
-            default:
-                btn.setBackground(Color.WHITE);
+            case 3: btn.setBackground(new Color(255, 180, 180)); break;
+            case 2: btn.setBackground(new Color(255, 220, 150)); break;
+            case 4: btn.setBackground(new Color(210, 255, 210)); break;
+            case 1: btn.setBackground(new Color(200, 230, 255)); break;
+            default: btn.setBackground(Color.WHITE);
         }
     }
 
@@ -178,8 +160,9 @@ if (GHE_ID_DANG_CHON != null && g.getGheId() == GHE_ID_DANG_CHON) {
         JPanel p = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         p.setOpaque(false);
 
-        JButton back = ghostButton("← Quay lại");
-        JButton next = primaryButton("Tiếp tục →");
+        // ✅ Dùng UserTheme thay vì primaryButton/ghostButton cũ
+        JButton back = UserTheme.createOutlineButton("← Quay lại");
+        JButton next = UserTheme.createButton("Tiếp tục →");
 
         back.addActionListener(e -> nav.show("KQ_CHUYEN"));
 
@@ -189,11 +172,10 @@ if (GHE_ID_DANG_CHON != null && g.getGheId() == GHE_ID_DANG_CHON) {
                 return;
             }
             nav.show("HANH_KHACH");
-
-Component comp = nav.get("HANH_KHACH");
-if (comp instanceof PnlThongTinHanhKhach) {
-    ((PnlThongTinHanhKhach) comp).reload();
-}
+            Component comp = nav.get("HANH_KHACH");
+            if (comp instanceof PnlThongTinHanhKhach) {
+                ((PnlThongTinHanhKhach) comp).reload();
+            }
         });
 
         p.add(back);
@@ -201,44 +183,24 @@ if (comp instanceof PnlThongTinHanhKhach) {
         return p;
     }
 
-    private JButton primaryButton(String text) {
-        JButton b = new JButton(text);
-        b.setBackground(UserTheme.PRIMARY);
-        b.setForeground(Color.WHITE);
-        b.setFocusPainted(false);
-        b.setBorder(BorderFactory.createEmptyBorder(10, 16, 10, 16));
-        return b;
-    }
-
-    private JButton ghostButton(String text) {
-        JButton b = new JButton(text);
-        b.setBackground(UserTheme.CARD);
-        b.setForeground(UserTheme.ACCENT);
-        b.setFocusPainted(false);
-        b.setBorder(BorderFactory.createLineBorder(UserTheme.ACCENT));
-        b.setPreferredSize(new Dimension(120, 36));
-        return b;
-    }
-
     public void reload() {
+        DatVeBUS.ThongTinHanhKhachVaGhe current = TempVeStore.getCurrent();
 
-    DatVeBUS.ThongTinHanhKhachVaGhe current = TempVeStore.getCurrent();
+        if (current != null) {
+            GHE_ID_DANG_CHON = current.getGheId();
+            lblInfo.setText("Đã chọn: " + current.getGheId());
+        } else {
+            GHE_ID_DANG_CHON = null;
+            lblInfo.setText("Chọn ghế");
+        }
 
-    if (current != null) {
-        GHE_ID_DANG_CHON = current.getGheId();
-        lblInfo.setText("Đã chọn: " + current.getGheId());
-    } else {
-        GHE_ID_DANG_CHON = null;
-        lblInfo.setText("Chọn ghế");
+        remove(seatArea);
+        seatArea = buildSeatMap();
+        add(seatArea, BorderLayout.CENTER);
+
+        revalidate();
+        repaint();
     }
-
-    remove(seatArea);
-    seatArea = buildSeatMap();
-    add(seatArea, BorderLayout.CENTER);
-
-    revalidate();
-    repaint();
-}
 
     private JPanel buildLegend() {
         JPanel p = new JPanel(new FlowLayout(FlowLayout.CENTER));
@@ -267,7 +229,6 @@ if (comp instanceof PnlThongTinHanhKhach) {
 
         p.add(box);
         p.add(new JLabel(text));
-
         return p;
     }
 }

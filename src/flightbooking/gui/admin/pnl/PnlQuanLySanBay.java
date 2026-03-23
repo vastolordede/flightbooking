@@ -3,6 +3,7 @@ package flightbooking.gui.admin.pnl;
 import flightbooking.bus.SanBayBUS;
 import flightbooking.dto.SanBayDTO;
 import flightbooking.util.ActionConstants;
+import flightbooking.util.ExcelExporter;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -25,6 +26,7 @@ public class PnlQuanLySanBay extends JPanel {
     private JButton btnAdd;
     private JButton btnUpdate;
     private JButton btnDelete;
+    private JButton btnExport;
 
     public PnlQuanLySanBay() {
         setLayout(new BorderLayout(10,10));
@@ -38,33 +40,30 @@ public class PnlQuanLySanBay extends JPanel {
     }
 
     private JPanel buildForm() {
-        JPanel form = new JPanel(new GridLayout(2,4,10,10));
-        form.add(new JLabel("Tên sân bay"));
-        form.add(txtTen);
-        form.add(new JLabel("Thành phố"));
-        form.add(txtThanhPho);
-        form.add(new JLabel("Quốc gia"));
-        form.add(txtQuocGia);
+    JPanel form = new JPanel(new GridBagLayout());
+    GridBagConstraints lc = makeLc(); GridBagConstraints fc = makeFc();
 
-        btnAdd = new JButton("Thêm");
-        btnUpdate = new JButton("Sửa");
-        btnDelete = new JButton("Xóa");
+    lc.gridx=0; lc.gridy=0; form.add(makeLabel("Tên sân bay"), lc);
+    fc.gridx=1; fc.gridy=0; styleField(txtTen); form.add(txtTen, fc);
 
-        btnAdd.addActionListener(e -> add());
-        btnUpdate.addActionListener(e -> update());
-        btnDelete.addActionListener(e -> delete());
+    lc.gridx=2; lc.gridy=0; form.add(makeLabel("Thành phố"), lc);
+    fc.gridx=3; fc.gridy=0; styleField(txtThanhPho); form.add(txtThanhPho, fc);
 
-        JPanel wrap = new JPanel(new BorderLayout(10,10));
-        wrap.add(form, BorderLayout.CENTER);
+    lc.gridx=4; lc.gridy=0; form.add(makeLabel("Quốc gia"), lc);
+    fc.gridx=5; fc.gridy=0; styleField(txtQuocGia); form.add(txtQuocGia, fc);
 
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        actions.add(btnAdd);
-        actions.add(btnUpdate);
-        actions.add(btnDelete);
+    btnAdd = new JButton("Thêm"); btnUpdate = new JButton("Sửa"); btnDelete = new JButton("Xóa");
+    btnAdd.addActionListener(e -> add());
+    btnUpdate.addActionListener(e -> update());
+    btnDelete.addActionListener(e -> delete());
 
-        wrap.add(actions, BorderLayout.SOUTH);
-        return wrap;
-    }
+    btnExport = new JButton("Xuất Excel");
+btnExport.addActionListener(e -> {
+    ExcelExporter.export(table, this);
+});
+
+return wrapWithActions(form, btnAdd, btnUpdate, btnDelete, btnExport);
+}
 
     private void reload() {
         model.setRowCount(0);
@@ -130,5 +129,45 @@ public class PnlQuanLySanBay extends JPanel {
     btnDelete.setVisible(actionIds.contains(ActionConstants.XOA));
     revalidate();
     repaint();
+}
+
+private GridBagConstraints makeLc() {
+    GridBagConstraints lc = new GridBagConstraints();
+    lc.anchor = GridBagConstraints.WEST;
+    lc.insets = new Insets(6, 4, 6, 6);
+    return lc;
+}
+
+private GridBagConstraints makeFc() {
+    GridBagConstraints fc = new GridBagConstraints();
+    fc.fill = GridBagConstraints.HORIZONTAL;
+    fc.weightx = 1.0;
+    fc.insets = new Insets(6, 0, 6, 12);
+    return fc;
+}
+
+private JLabel makeLabel(String text) {
+    JLabel lb = new JLabel(text);
+    lb.setFont(lb.getFont().deriveFont(Font.PLAIN, 13f));
+    return lb;
+}
+
+private void styleField(JTextField field) {
+    field.setPreferredSize(new Dimension(160, 30));
+    field.setFont(field.getFont().deriveFont(13f));
+    field.setBorder(BorderFactory.createCompoundBorder(
+        BorderFactory.createLineBorder(new Color(200, 200, 200)),
+        BorderFactory.createEmptyBorder(3, 8, 3, 8)
+    ));
+}
+
+private JPanel wrapWithActions(JPanel form, JButton... buttons) {
+    JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 4));
+    for (JButton b : buttons) actions.add(b);
+    JPanel wrap = new JPanel(new BorderLayout(0, 8));
+    wrap.setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0));
+    wrap.add(form, BorderLayout.CENTER);
+    wrap.add(actions, BorderLayout.SOUTH);
+    return wrap;
 }
 }

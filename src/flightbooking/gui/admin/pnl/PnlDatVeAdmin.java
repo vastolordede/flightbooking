@@ -2,13 +2,18 @@ package flightbooking.gui.admin.pnl;
 
 import flightbooking.bus.ChuyenBayBUS;
 import flightbooking.bus.DatVeBUS;
+import flightbooking.bus.ThongTinVeBUS;
 import flightbooking.dto.ChuyenBayDTO;
 import flightbooking.dto.GheDTO;
 import flightbooking.dto.HanhKhachDTO;
+import flightbooking.dto.ThongTinVeDTO;
 import flightbooking.util.ActionConstants;
+import flightbooking.util.ExcelExporter;
 import flightbooking.util.SessionContext;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,12 +23,18 @@ public class PnlDatVeAdmin extends JPanel {
 
     private final DatVeBUS datVeBUS = new DatVeBUS();
     private final ChuyenBayBUS chuyenBayBUS = new ChuyenBayBUS();
+    private final ThongTinVeBUS thongTinVeBUS = new ThongTinVeBUS();
 
     private JButton btnTaoVe;
+    private JButton btnExport;
 
     // ✅ combo thay vì nhập ID
     private final JComboBox<ChuyenItem> cbChuyen = new JComboBox<>();
-    private final JComboBox<GheItem> cbGhe = new JComboBox<>();
+    private JButton btnChonGhe;
+private JLabel lblGheDaChon = new JLabel("Chưa chọn ghế");
+private Integer gheIdDaChon = null;
+private JTable tableVe;
+private DefaultTableModel modelVe;
 
     private final JTextField txtHoTen = new JTextField();
     private final JTextField txtSoGiayTo = new JTextField();
@@ -35,58 +46,89 @@ public class PnlDatVeAdmin extends JPanel {
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         add(buildForm(), BorderLayout.NORTH);
-        add(buildHint(), BorderLayout.CENTER);
+        add(buildTableVe(), BorderLayout.CENTER);
 
         loadChuyenBay();
     }
 
-    private JComponent buildHint() {
-        JTextArea ta = new JTextArea(
-                "Đặt vé quầy (Admin):\n" +
-                        "1) Chọn chuyến bay\n" +
-                        "2) Chọn ghế còn trống\n" +
-                        "3) Nhập thông tin hành khách\n" +
-                        "4) Bấm 'Tạo vé'\n"
-        );
-        ta.setEditable(false);
-        ta.setLineWrap(true);
-        ta.setWrapStyleWord(true);
-        ta.setBackground(getBackground());
-        return new JScrollPane(ta);
+    private JComponent buildTableVe() {
+
+    modelVe = new DefaultTableModel(
+        new Object[]{"Chuyến", "Hành khách", "Giấy tờ", "Tuyến", "Ghế", "Hạng", "Giá"}, 0
+    ) {
+        @Override public boolean isCellEditable(int r, int c) { return false; }
+    };
+
+    tableVe = new JTable(modelVe);
+
+    loadVeNhanVien();
+
+    return new JScrollPane(tableVe);
+}
+
+private void loadVeNhanVien() {
+
+    modelVe.setRowCount(0);
+
+    Integer adminId = SessionContext.getAdminTaiKhoanId();
+    if (adminId == null || adminId == 0) return;
+
+    List<ThongTinVeDTO> list = thongTinVeBUS.getByNhanVien(adminId);
+
+    for (ThongTinVeDTO t : list) {
+
+        String tuyen = t.getSanBayDi() + " → " + t.getSanBayDen();
+
+        modelVe.addRow(new Object[]{
+            "CB#" + t.getChuyenBayId(),
+            t.getHoTen(),
+            t.getSoGiayTo(),
+            tuyen,
+            t.getTenGhe(),
+            t.getHangGhe(),
+            t.getGia()
+        });
     }
+}
 
     private JPanel buildForm() {
-        JPanel form = new JPanel(new GridLayout(3, 4, 10, 10));
+    JPanel form = new JPanel(new GridBagLayout());
+    GridBagConstraints lc = makeLc(); GridBagConstraints fc = makeFc();
 
-        form.add(new JLabel("Chuyến bay"));
-        form.add(cbChuyen);
+    lc.gridx=0; lc.gridy=0; form.add(makeLabel("Chuyến bay"), lc);
+    fc.gridx=1; fc.gridy=0; form.add(cbChuyen, fc);
 
-        form.add(new JLabel("Ghế (còn trống)"));
-        form.add(cbGhe);
+    lc.gridx=2; lc.gridy=0;
+form.add(makeLabel("Ghế"), lc);
 
-        form.add(new JLabel("Họ tên hành khách"));
-        form.add(txtHoTen);
+btnChonGhe = new JButton("Chọn ghế");
+btnChonGhe.addActionListener(e -> openSeatMapPopup());
 
-        form.add(new JLabel("Số giấy tờ"));
-        form.add(txtSoGiayTo);
+JPanel ghePanel = new JPanel(new BorderLayout());
+ghePanel.add(btnChonGhe, BorderLayout.WEST);
+ghePanel.add(lblGheDaChon, BorderLayout.CENTER);
 
-        form.add(new JLabel("Thanh toán"));
-        form.add(cbPay);
+fc.gridx=3; fc.gridy=0;
+form.add(ghePanel, fc);
 
-        cbChuyen.addActionListener(e -> loadGheTheoChuyen());
+    lc.gridx=0; lc.gridy=1; form.add(makeLabel("Họ tên hành khách"), lc);
+    fc.gridx=1; fc.gridy=1; styleField(txtHoTen); form.add(txtHoTen, fc);
 
-        btnTaoVe = new JButton("Tạo vé");
-        btnTaoVe.addActionListener(e -> taoVe());
+    lc.gridx=2; lc.gridy=1; form.add(makeLabel("Số giấy tờ"), lc);
+    fc.gridx=3; fc.gridy=1; styleField(txtSoGiayTo); form.add(txtSoGiayTo, fc);
 
-        JPanel wrap = new JPanel(new BorderLayout(10, 10));
-        wrap.add(form, BorderLayout.CENTER);
+    lc.gridx=4; lc.gridy=1; form.add(makeLabel("Thanh toán"), lc);
+    fc.gridx=5; fc.gridy=1; form.add(cbPay, fc);
 
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        actions.add(btnTaoVe);
-        wrap.add(actions, BorderLayout.SOUTH);
+    btnExport = new JButton("Xuất Excel");
+btnExport.addActionListener(e -> {
+    ExcelExporter.export(tableVe, this);
+});
+    btnTaoVe = new JButton("Tạo vé");
+    btnTaoVe.addActionListener(e -> taoVe());
 
-        return wrap;
-    }
+    return wrapWithActions(form, btnTaoVe, btnExport, btnExport);
+}
 
     private void loadChuyenBay() {
         cbChuyen.removeAllItems();
@@ -99,43 +141,72 @@ public class PnlDatVeAdmin extends JPanel {
             String text = "CB#" + c.getChuyenBayId() + " • " + tuyen + " • " + c.getGioKhoiHanh();
             cbChuyen.addItem(new ChuyenItem(c.getChuyenBayId(), text));
         }
-        loadGheTheoChuyen();
+        
     }
 
-    private void loadGheTheoChuyen() {
-        cbGhe.removeAllItems();
-        ChuyenItem it = (ChuyenItem) cbChuyen.getSelectedItem();
-        if (it == null) return;
+    private void openSeatMapPopup() {
+    ChuyenItem cb = (ChuyenItem) cbChuyen.getSelectedItem();
+    if (cb == null) {
+        JOptionPane.showMessageDialog(this, "Chọn chuyến bay trước.");
+        return;
+    }
 
-        List<GheDTO> all = datVeBUS.dsGheCuaChuyen(it.id);
+    int chuyenBayId = cb.id;
 
-        // ✅ chỉ hiện ghế trống
-        List<GheDTO> free = all.stream()
-                .filter(g -> !(g.isDaDat() || (g.getTrangThai() != null && g.getTrangThai() == 0)))
-                .sorted((a, b) -> String.valueOf(a.getTenGhe()).compareToIgnoreCase(String.valueOf(b.getTenGhe())))
-                .collect(Collectors.toList());
+    JDialog dialog = new JDialog(
+            SwingUtilities.getWindowAncestor(this),
+            "Chọn ghế",
+            Dialog.ModalityType.APPLICATION_MODAL
+    );
 
-        for (GheDTO g : free) {
-            int tang = (g.getTang() == null ? 1 : g.getTang());
-            String text = "Tầng " + tang + " - " + g.getTenGhe();
-            cbGhe.addItem(new GheItem(g.getGheId(), text));
+    dialog.setSize(1000, 600);
+    dialog.setLocationRelativeTo(this);
+
+    AdminSeatMapPanel panel = new AdminSeatMapPanel(chuyenBayId);
+
+    JButton btnOK = new JButton("Xác nhận");
+
+    btnOK.addActionListener(e -> {
+        if (panel.gheDangChon == null) {
+            JOptionPane.showMessageDialog(dialog, "Chưa chọn ghế.");
+            return;
         }
-    }
+
+        gheIdDaChon = panel.gheDangChon;
+        lblGheDaChon.setText("Đã chọn: " + panel.gheText);
+
+        dialog.dispose();
+    });
+
+    dialog.setLayout(new BorderLayout());
+    dialog.add(panel, BorderLayout.CENTER);
+
+    JPanel bottom = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+    bottom.add(btnOK);
+
+    dialog.add(bottom, BorderLayout.SOUTH);
+
+    dialog.setVisible(true);
+}
 
     private void taoVe() {
         ChuyenItem cb = (ChuyenItem) cbChuyen.getSelectedItem();
-        GheItem ghe = (GheItem) cbGhe.getSelectedItem();
+        if (gheIdDaChon == null) {
+    JOptionPane.showMessageDialog(this, "Chưa chọn ghế.");
+    return;
+}
+int gheId = gheIdDaChon;
         String ten = txtHoTen.getText().trim();
         String giayto = txtSoGiayTo.getText().trim();
 
-        if (cb == null || ghe == null || ten.isEmpty()) {
+        if (cb == null || ten.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Vui lòng chọn chuyến, chọn ghế, nhập họ tên.");
             return;
         }
 
         try {
             int chuyenBayId = cb.id;
-            int gheId = ghe.id;
+            
 
             DatVeBUS.ThongTinHanhKhachVaGhe item = new DatVeBUS.ThongTinHanhKhachVaGhe();
             HanhKhachDTO hk = new HanhKhachDTO();
@@ -170,7 +241,8 @@ public class PnlDatVeAdmin extends JPanel {
 
             JOptionPane.showMessageDialog(this, "✓ Tạo vé thành công!");
             clearForm();
-            loadGheTheoChuyen(); // refresh vì ghế vừa đặt xong
+            repaint();
+             // refresh vì ghế vừa đặt xong
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "❌ Không tạo được vé: " + ex.getMessage());
         }
@@ -181,6 +253,9 @@ public class PnlDatVeAdmin extends JPanel {
         txtHoTen.setText("");
         txtSoGiayTo.setText("");
         cbPay.setSelectedIndex(0);
+
+        gheIdDaChon = null;
+    lblGheDaChon.setText("Chưa chọn ghế");
     }
 
     private static class ChuyenItem {
@@ -213,7 +288,47 @@ public class PnlDatVeAdmin extends JPanel {
         }
     }
     public void applyPermissions(List<Integer> actionIds) {
-    btnTaoVe.setVisible(actionIds.contains(ActionConstants.TAO_VE));
+    btnExport.setVisible(actionIds.contains(ActionConstants.XUAT_EXCEL));
     revalidate(); repaint();
+}
+
+private GridBagConstraints makeLc() {
+    GridBagConstraints lc = new GridBagConstraints();
+    lc.anchor = GridBagConstraints.WEST;
+    lc.insets = new Insets(6, 4, 6, 6);
+    return lc;
+}
+
+private GridBagConstraints makeFc() {
+    GridBagConstraints fc = new GridBagConstraints();
+    fc.fill = GridBagConstraints.HORIZONTAL;
+    fc.weightx = 1.0;
+    fc.insets = new Insets(6, 0, 6, 12);
+    return fc;
+}
+
+private JLabel makeLabel(String text) {
+    JLabel lb = new JLabel(text);
+    lb.setFont(lb.getFont().deriveFont(Font.PLAIN, 13f));
+    return lb;
+}
+
+private void styleField(JTextField field) {
+    field.setPreferredSize(new Dimension(160, 30));
+    field.setFont(field.getFont().deriveFont(13f));
+    field.setBorder(BorderFactory.createCompoundBorder(
+        BorderFactory.createLineBorder(new Color(200, 200, 200)),
+        BorderFactory.createEmptyBorder(3, 8, 3, 8)
+    ));
+}
+
+private JPanel wrapWithActions(JPanel form, JButton... buttons) {
+    JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 4));
+    for (JButton b : buttons) actions.add(b);
+    JPanel wrap = new JPanel(new BorderLayout(0, 8));
+    wrap.setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0));
+    wrap.add(form, BorderLayout.CENTER);
+    wrap.add(actions, BorderLayout.SOUTH);
+    return wrap;
 }
 }

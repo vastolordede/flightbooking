@@ -23,4 +23,7 @@ public class ThongTinVeBUS {
     public List<ThongTinVeDTO> getSimpleByKhachHang(int khachHangId) {
     return dao.getSimpleByKhachHang(khachHangId);
 }
+public List<ThongTinVeDTO> getByNhanVien(int taiKhoanNhanVienId) {
+    return dao.getByNhanVien(taiKhoanNhanVienId);
+}
 }

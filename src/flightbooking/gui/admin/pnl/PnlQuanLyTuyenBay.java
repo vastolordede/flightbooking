@@ -5,6 +5,7 @@ import flightbooking.bus.TuyenBayBUS;
 import flightbooking.dto.SanBayDTO;
 import flightbooking.dto.TuyenBayDTO;
 import flightbooking.util.ActionConstants;
+import flightbooking.util.ExcelExporter;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -19,6 +20,7 @@ public class PnlQuanLyTuyenBay extends JPanel {
     private JButton btnAdd;
     private JButton btnUpdate;
     private JButton btnDelete;
+    private JButton btnExport;
 
     private final DefaultTableModel model = new DefaultTableModel(
             new Object[]{"ID", "Sân bay đi", "Sân bay đến", "Số dặm"}, 0
@@ -43,36 +45,29 @@ public class PnlQuanLyTuyenBay extends JPanel {
     }
 
     private JPanel buildForm() {
-        JPanel form = new JPanel(new GridLayout(2, 4, 10, 10));
+    JPanel form = new JPanel(new GridBagLayout());
+    GridBagConstraints lc = makeLc(); GridBagConstraints fc = makeFc();
 
-        form.add(new JLabel("Sân bay đi"));
-        form.add(cbSanBayDi);
+    lc.gridx=0; lc.gridy=0; form.add(makeLabel("Sân bay đi"), lc);
+    fc.gridx=1; fc.gridy=0; form.add(cbSanBayDi, fc);
 
-        form.add(new JLabel("Sân bay đến"));
-        form.add(cbSanBayDen);
+    lc.gridx=2; lc.gridy=0; form.add(makeLabel("Sân bay đến"), lc);
+    fc.gridx=3; fc.gridy=0; form.add(cbSanBayDen, fc);
 
-        form.add(new JLabel("Số dặm"));
-        form.add(spSoDam);
+    lc.gridx=4; lc.gridy=0; form.add(makeLabel("Số dặm"), lc);
+    fc.gridx=5; fc.gridy=0; form.add(spSoDam, fc);
 
-        JPanel wrap = new JPanel(new BorderLayout(10, 10));
-        wrap.add(form, BorderLayout.CENTER);
+    btnAdd = new JButton("Thêm"); btnUpdate = new JButton("Sửa"); btnDelete = new JButton("Xóa");
+    btnAdd.addActionListener(e -> add());
+    btnUpdate.addActionListener(e -> update());
+    btnDelete.addActionListener(e -> delete());
+    btnExport = new JButton("Xuất Excel");
+btnExport.addActionListener(e -> {
+    ExcelExporter.export(table, this);
+});
 
-         btnAdd = new JButton("Thêm");
-         btnUpdate = new JButton("Sửa");
-         btnDelete = new JButton("Xóa");
-
-        btnAdd.addActionListener(e -> add());
-        btnUpdate.addActionListener(e -> update());
-        btnDelete.addActionListener(e -> delete());
-
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        actions.add(btnAdd);
-        actions.add(btnUpdate);
-        actions.add(btnDelete);
-
-        wrap.add(actions, BorderLayout.SOUTH);
-        return wrap;
-    }
+return wrapWithActions(form, btnAdd, btnUpdate, btnDelete, btnExport);
+}
 
     private void loadSanBayToCombo() {
         cbSanBayDi.removeAllItems();
@@ -191,5 +186,45 @@ public class PnlQuanLyTuyenBay extends JPanel {
     btnUpdate.setVisible(actionIds.contains(ActionConstants.SUA));
     btnDelete.setVisible(actionIds.contains(ActionConstants.XOA));
     revalidate(); repaint();
+}
+
+private GridBagConstraints makeLc() {
+    GridBagConstraints lc = new GridBagConstraints();
+    lc.anchor = GridBagConstraints.WEST;
+    lc.insets = new Insets(6, 4, 6, 6);
+    return lc;
+}
+
+private GridBagConstraints makeFc() {
+    GridBagConstraints fc = new GridBagConstraints();
+    fc.fill = GridBagConstraints.HORIZONTAL;
+    fc.weightx = 1.0;
+    fc.insets = new Insets(6, 0, 6, 12);
+    return fc;
+}
+
+private JLabel makeLabel(String text) {
+    JLabel lb = new JLabel(text);
+    lb.setFont(lb.getFont().deriveFont(Font.PLAIN, 13f));
+    return lb;
+}
+
+private void styleField(JTextField field) {
+    field.setPreferredSize(new Dimension(160, 30));
+    field.setFont(field.getFont().deriveFont(13f));
+    field.setBorder(BorderFactory.createCompoundBorder(
+        BorderFactory.createLineBorder(new Color(200, 200, 200)),
+        BorderFactory.createEmptyBorder(3, 8, 3, 8)
+    ));
+}
+
+private JPanel wrapWithActions(JPanel form, JButton... buttons) {
+    JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 4));
+    for (JButton b : buttons) actions.add(b);
+    JPanel wrap = new JPanel(new BorderLayout(0, 8));
+    wrap.setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0));
+    wrap.add(form, BorderLayout.CENTER);
+    wrap.add(actions, BorderLayout.SOUTH);
+    return wrap;
 }
 }

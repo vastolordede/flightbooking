@@ -35,14 +35,14 @@ public class PnlNhomQuyen extends JPanel {
     // map quyền -> action hiển thị
     private static final Map<String, String[]> ACTION_MAP = new HashMap<>();
     static {
-        ACTION_MAP.put("quản lý sân bay", new String[]{"Thêm", "Sửa", "Xóa"});
-        ACTION_MAP.put("quản lý tuyến bay", new String[]{"Thêm", "Sửa", "Xóa"});
-        ACTION_MAP.put("quản lý chuyến bay", new String[]{"Thêm", "Sửa", "Xóa", "Giá hạng ghế", "Sơ đồ ghế"});
-        ACTION_MAP.put("đặt vé (quầy)", new String[]{"Tạo vé"});
-        ACTION_MAP.put("quản lý hãng hàng không", new String[]{"Thêm", "Sửa", "Xóa"});
-        ACTION_MAP.put("quản lý máy bay", new String[]{"Thêm", "Sửa", "Xóa", "Tạo ghế"});
-        ACTION_MAP.put("quản lý nhân viên", new String[]{"Thêm", "Sửa", "Xóa", "Phân quyền"});
-        ACTION_MAP.put("quản lý nhóm quyền", new String[]{"Tạo", "Cập nhật", "Xóa"});
+        ACTION_MAP.put("quản lý sân bay", new String[]{"Thêm", "Sửa", "Xóa", "Xuất Excel"});
+        ACTION_MAP.put("quản lý tuyến bay", new String[]{"Thêm", "Sửa", "Xóa", "Xuất Excel"});
+        ACTION_MAP.put("quản lý chuyến bay", new String[]{"Thêm", "Sửa", "Xóa", "Giá hạng ghế", "Sơ đồ ghế", "Xuất Excel"});
+        ACTION_MAP.put("đặt vé (quầy)", new String[]{"Tạo vé", "Xuất Excel"});
+        ACTION_MAP.put("quản lý hãng hàng không", new String[]{"Thêm", "Sửa", "Xóa", "Xuất Excel"});
+        ACTION_MAP.put("quản lý máy bay", new String[]{"Thêm", "Sửa", "Xóa", "Tạo ghế", "Xuất Excel"});
+        ACTION_MAP.put("quản lý nhân viên", new String[]{"Thêm", "Sửa", "Xóa", "Phân quyền", "Xuất Excel"});
+        ACTION_MAP.put("quản lý nhóm quyền", new String[]{"Tạo", "Cập nhật", "Xóa", "Xuất Excel"});
     }
 
     private static final String[] DEFAULT_ACTIONS = {"Thêm", "Sửa", "Xóa"};
@@ -67,25 +67,65 @@ public class PnlNhomQuyen extends JPanel {
     }
 
     private JPanel buildTop() {
+        JPanel form = new JPanel(new GridBagLayout());
+        GridBagConstraints lc = makeLc();
+        GridBagConstraints fc = makeFc();
 
-        JPanel p = new JPanel(new GridLayout(2, 3, 10, 10));
-        p.add(new JLabel("Tên nhóm quyền"));
-        p.add(txtTen);
+        lc.gridx=0; lc.gridy=0; form.add(makeLabel("Tên nhóm quyền"), lc);
+        fc.gridx=1; fc.gridy=0; fc.gridwidth=3;
+        styleField(txtTen); form.add(txtTen, fc);
+        fc.gridwidth=1;
 
-         btnSave = new JButton("Tạo");
+        btnSave   = new JButton("Tạo");
+        btnUpdate = new JButton("Cập nhật");
+        btnDelete = new JButton("Xóa");
+
         btnSave.addActionListener(e -> save());
-
-         btnUpdate = new JButton("Cập nhật");
         btnUpdate.addActionListener(e -> update());
-
-         btnDelete = new JButton("Xóa");
         btnDelete.addActionListener(e -> delete());
 
-        p.add(btnSave);
-        p.add(btnUpdate);
-        p.add(btnDelete);
+        return wrapWithActions(form, btnSave, btnUpdate, btnDelete);
+    }
 
-        return p;
+    // Thêm các helper vào PnlNhomQuyen
+    private GridBagConstraints makeLc() {
+        GridBagConstraints lc = new GridBagConstraints();
+        lc.anchor = GridBagConstraints.WEST;
+        lc.insets = new Insets(6, 4, 6, 6);
+        return lc;
+    }
+
+    private GridBagConstraints makeFc() {
+        GridBagConstraints fc = new GridBagConstraints();
+        fc.fill = GridBagConstraints.HORIZONTAL;
+        fc.weightx = 1.0;
+        fc.insets = new Insets(6, 0, 6, 12);
+        return fc;
+    }
+
+    private JLabel makeLabel(String text) {
+        JLabel lb = new JLabel(text);
+        lb.setFont(lb.getFont().deriveFont(Font.PLAIN, 13f));
+        return lb;
+    }
+
+    private void styleField(JTextField field) {
+        field.setPreferredSize(new Dimension(200, 30));
+        field.setFont(field.getFont().deriveFont(13f));
+        field.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(200, 200, 200)),
+            BorderFactory.createEmptyBorder(3, 8, 3, 8)
+        ));
+    }
+
+    private JPanel wrapWithActions(JPanel form, JButton... buttons) {
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 4));
+        for (JButton b : buttons) actions.add(b);
+        JPanel wrap = new JPanel(new BorderLayout(0, 8));
+        wrap.setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0));
+        wrap.add(form, BorderLayout.CENTER);
+        wrap.add(actions, BorderLayout.SOUTH);
+        return wrap;
     }
 
     private void loadActionMap() {

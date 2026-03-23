@@ -1,14 +1,17 @@
 package flightbooking.gui.admin.pnl;
 
 import flightbooking.bus.ChuyenBayBUS;
+import flightbooking.bus.HangHangKhongBUS;
 import flightbooking.bus.MayBayBUS;
 import flightbooking.bus.TuyenBayBUS;
 import flightbooking.dao.GiaHangChuyenBayDAO;
 import flightbooking.dto.ChuyenBayDTO;
 import flightbooking.dto.GiaHangChuyenBayDTO;
+import flightbooking.dto.HangHangKhongDTO;
 import flightbooking.dto.MayBayDTO;
 import flightbooking.dto.TuyenBayDTO;
 import flightbooking.util.ActionConstants;
+import flightbooking.util.ExcelExporter;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -22,6 +25,7 @@ public class PnlQuanLyChuyenBay extends JPanel {
     private final ChuyenBayBUS chuyenBayBUS = new ChuyenBayBUS();
     private final TuyenBayBUS tuyenBayBUS = new TuyenBayBUS();
     private final MayBayBUS mayBayBUS = new MayBayBUS();
+    private JButton btnExport;
 
     private final DefaultTableModel model = new DefaultTableModel(
             new Object[]{"ID", "TuyenBayId", "Tuyến", "HHK_ID", "Máy bay", "Giờ KH", "Giờ Đến", "Trạng thái"}, 0
@@ -30,7 +34,8 @@ public class PnlQuanLyChuyenBay extends JPanel {
     private final JTable table = new JTable(model);
 
     private final JComboBox<Item> cbTuyenBay = new JComboBox<>();
-    private final JTextField txtHangHangKhongId = new JTextField();
+    private final JComboBox<HHKItem> cbHangHK = new JComboBox<>();
+private final HangHangKhongBUS hangBUS = new HangHangKhongBUS();
 
     private JButton btnAdd;
     private JButton btnUpdate;
@@ -39,11 +44,25 @@ public class PnlQuanLyChuyenBay extends JPanel {
     private JButton btnSeatMap;
     private JButton btnReload;
 
+    private static class HHKItem {
+    final int id;
+    final String text;
+
+    HHKItem(int id, String text) {
+        this.id = id;
+        this.text = text;
+    }
+
+    @Override
+    public String toString() {
+        return text;
+    }
+}
     // ✅ đổi sang combo máy bay
     private final JComboBox<MayBayItem> cbMayBay = new JComboBox<>();
 
-    private final JTextField txtGioKhoiHanh = new JTextField();
-    private final JTextField txtGioDen = new JTextField();
+    private final JSpinner spGioKhoiHanh = new JSpinner(new SpinnerDateModel());
+private final JSpinner spGioDen = new JSpinner(new SpinnerDateModel());
     private final JComboBox<String> cbTrangThai = new JComboBox<>(new String[]{"1 - Đang mở", "0 - Hủy/Đóng"});
 
     private final DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
@@ -57,6 +76,7 @@ public class PnlQuanLyChuyenBay extends JPanel {
 
         loadTuyenBayToCombo();
         loadMayBayToCombo();
+        loadHangHKToCombo();
         reload();
 
         table.getSelectionModel().addListSelectionListener(e -> fillFormFromSelectedRow());
@@ -73,16 +93,16 @@ public class PnlQuanLyChuyenBay extends JPanel {
         form.add(cbTuyenBay);
 
         form.add(new JLabel("Hãng HK ID"));
-        form.add(txtHangHangKhongId);
+        form.add(cbHangHK);
 
         form.add(new JLabel("Máy bay"));
         form.add(cbMayBay);
 
         form.add(new JLabel("Giờ khởi hành (yyyy-MM-dd HH:mm)"));
-        form.add(txtGioKhoiHanh);
+        form.add(spGioKhoiHanh);
 
         form.add(new JLabel("Giờ đến (yyyy-MM-dd HH:mm)"));
-        form.add(txtGioDen);
+        form.add(spGioDen);
 
         form.add(new JLabel("Trạng thái"));
         form.add(cbTrangThai);
@@ -92,6 +112,10 @@ public class PnlQuanLyChuyenBay extends JPanel {
         btnDelete = new JButton("Xóa");
         btnSeatMap = new JButton("Sơ đồ ghế");
         btnReload = new JButton("Làm mới");
+        btnExport = new JButton("Xuất Excel");
+btnExport.addActionListener(e -> {
+    ExcelExporter.export(table, this);
+});
 
         btnAdd.addActionListener(e -> add());
         btnUpdate.addActionListener(e -> update());
@@ -121,6 +145,12 @@ btnGiaHang.addActionListener(e -> openGiaHangDialog());
         actions.add(btnGiaHang);
         actions.add(btnSeatMap);
         
+        btnExport = new JButton("Xuất Excel");
+btnExport.addActionListener(e -> {
+    ExcelExporter.export(table, this);
+});
+
+actions.add(btnExport);
 
         wrap.add(actions, BorderLayout.SOUTH);
         return wrap;
@@ -132,7 +162,10 @@ btnGiaHang.addActionListener(e -> openGiaHangDialog());
         for (TuyenBayDTO t : list) {
             String di = t.getSanBayDiTen() != null ? t.getSanBayDiTen() : ("SB#" + t.getSanBayDiId());
             String den = t.getSanBayDenTen() != null ? t.getSanBayDenTen() : ("SB#" + t.getSanBayDenId());
-            cbTuyenBay.addItem(new Item(t.getTuyenBayId(), di + " → " + den));
+            cbTuyenBay.addItem(new Item(
+    t.getTuyenBayId(),
+    "ID=" + t.getTuyenBayId() + " | " + di + " → " + den
+));
         }
     }
 
@@ -152,7 +185,7 @@ btnGiaHang.addActionListener(e -> openGiaHangDialog());
         List<ChuyenBayDTO> list = chuyenBayBUS.dsChuyenBay();
 
         for (ChuyenBayDTO c : list) {
-            String tuyenTxt = "Tuyến " + c.getTuyenBayId();
+            String tuyenTxt = c.getSanBayDiTen() + " → " + c.getSanBayDenTen();
             String mbTxt = (c.getMayBayId() != null) ? ("MB#" + c.getMayBayId()) : "(null)";
 
             model.addRow(new Object[]{
@@ -186,11 +219,22 @@ btnGiaHang.addActionListener(e -> openGiaHangDialog());
         Integer tt = (Integer) model.getValueAt(row, 7);
 
         selectComboById(cbTuyenBay, tuyenBayId != null ? tuyenBayId : -1);
-        txtHangHangKhongId.setText(hhk == null ? "" : String.valueOf(hhk));
+        selectComboHHKById(hhk != null ? hhk : -1);
         selectComboMayBayById(mbId != null ? mbId : -1);
 
-        txtGioKhoiHanh.setText(gkh == null ? "" : String.valueOf(gkh).replace('T', ' '));
-        txtGioDen.setText(gd == null ? "" : String.valueOf(gd).replace('T', ' '));
+        if (gkh != null) {
+    spGioKhoiHanh.setValue(java.util.Date.from(
+        ((LocalDateTime) dto.getGioKhoiHanh())
+        .atZone(java.time.ZoneId.systemDefault()).toInstant()
+    ));
+}
+
+if (gd != null) {
+    spGioDen.setValue(java.util.Date.from(
+        ((LocalDateTime) dto.getGioDen())
+        .atZone(java.time.ZoneId.systemDefault()).toInstant()
+    ));
+}
 
         cbTrangThai.setSelectedIndex(tt != null && tt == 1 ? 0 : 1);
     }
@@ -216,11 +260,17 @@ btnGiaHang.addActionListener(e -> openGiaHangDialog());
 
         ChuyenBayDTO c = new ChuyenBayDTO();
         c.setTuyenBayId(tuyen.id);
-        c.setHangHangKhongId(parseInt(txtHangHangKhongId.getText(), "Hãng HK ID"));
+        HHKItem hhk = (HHKItem) cbHangHK.getSelectedItem();
+if (hhk == null) return;
+
+c.setHangHangKhongId(hhk.id);
         c.setMayBayId(mb.id);
 
-        LocalDateTime gkh = parseDate(txtGioKhoiHanh.getText().trim(), "Giờ khởi hành");
-        LocalDateTime gd = parseDate(txtGioDen.getText().trim(), "Giờ đến");
+        LocalDateTime gkh = ((java.util.Date) spGioKhoiHanh.getValue())
+        .toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime();
+
+LocalDateTime gd = ((java.util.Date) spGioDen.getValue())
+        .toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime();
         c.setGioKhoiHanh(gkh);
         c.setGioDen(gd);
         c.setTrangThai(cbTrangThai.getSelectedIndex() == 0 ? 1 : 0);
@@ -242,12 +292,21 @@ btnGiaHang.addActionListener(e -> openGiaHangDialog());
         ChuyenBayDTO c = new ChuyenBayDTO();
         c.setChuyenBayId(id);
         c.setTuyenBayId(tuyen.id);
-        c.setHangHangKhongId(parseInt(txtHangHangKhongId.getText(), "Hãng HK ID"));
+        HHKItem hhk = (HHKItem) cbHangHK.getSelectedItem();
+if (hhk == null) return;
+
+c.setHangHangKhongId(hhk.id);
         c.setMayBayId(mb.id);
 
-        c.setGioKhoiHanh(parseDate(txtGioKhoiHanh.getText().trim(), "Giờ khởi hành"));
-        c.setGioDen(parseDate(txtGioDen.getText().trim(), "Giờ đến"));
+        LocalDateTime gkh = ((java.util.Date) spGioKhoiHanh.getValue())
+        .toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime();
+
+LocalDateTime gd = ((java.util.Date) spGioDen.getValue())
+        .toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime();
         c.setTrangThai(cbTrangThai.getSelectedIndex() == 0 ? 1 : 0);
+
+        c.setGioKhoiHanh(gkh);   // 🔥 THIẾU
+c.setGioDen(gd);
 
         chuyenBayBUS.capNhatChuyenBay(c);
         reload();
@@ -308,21 +367,21 @@ btnGiaHang.addActionListener(e -> openGiaHangDialog());
 
     // Thêm cột Tên Hạng Ghế (Cột 0 và 1 sẽ khóa không cho sửa)
     DefaultTableModel m = new DefaultTableModel(
-            new Object[]{"ID", "Tên Hạng Ghế", "Giá cơ bản", "Thuế"}, 0
+            new Object[]{"ID", "Tên Hạng Ghế", "Giá cơ bản"}, 0
     ) {
         @Override
         public boolean isCellEditable(int r, int c) {
-            return c == 2 || c == 3; // Chỉ cho sửa cột Giá và Thuế
+            return c == 2; // Chỉ cho sửa cột Giá và Thuế
         }
     };
     JTable tbl = new JTable(m);
 
     // Mảng chứa các hạng ghế theo thứ tự ID
     Object[][] danhSachHangGhe = {
-        {3, "First Class", 4500000, 0},
-        {2, "Business", 2500000, 0},
-        {4, "Premium Economy", 1800000, 0},
-        {1, "Economy", 1200000, 0}
+        {3, "First Class", 4500000},
+        {2, "Business", 2500000},
+        {4, "Premium Economy", 1800000},
+        {1, "Economy", 1200000}
     };
 
     GiaHangChuyenBayDAO dao = new GiaHangChuyenBayDAO();
@@ -335,19 +394,19 @@ btnGiaHang.addActionListener(e -> openGiaHangDialog());
             int hangGheId = (Integer) hg[0];
             String tenHang = (String) hg[1];
             long giaHienTai = ((Number) hg[2]).longValue(); // Giá mặc định ban đầu
-            long thueHienTai = ((Number) hg[3]).longValue(); // Thuế mặc định ban đầu
+             // Thuế mặc định ban đầu
             
             // Tìm trong list xem đã lưu chưa
             if (giaDaLuu != null) {
                 for (GiaHangChuyenBayDTO daLuu : giaDaLuu) {
                     if (daLuu.getHangGheId() == hangGheId) {
                         giaHienTai = daLuu.getGiaCoBan().longValue();
-                        thueHienTai = daLuu.getThuePhi() != null ? daLuu.getThuePhi().longValue() : 0;
+                        
                         break;
                     }
                 }
             }
-            m.addRow(new Object[]{hangGheId, tenHang, giaHienTai, thueHienTai});
+            m.addRow(new Object[]{hangGheId, tenHang, giaHienTai});
         }
     } catch (Exception e) {
         JOptionPane.showMessageDialog(this, "Không thể tải giá cũ: " + e.getMessage());
@@ -368,20 +427,20 @@ btnGiaHang.addActionListener(e -> openGiaHangDialog());
                 
                 // Xử lý giá trị bị nhập rỗng hoặc null, và loại bỏ ký tự trắng
                 String strGia = m.getValueAt(i, 2) == null ? "0" : m.getValueAt(i, 2).toString().trim();
-                String strThue = m.getValueAt(i, 3) == null ? "0" : m.getValueAt(i, 3).toString().trim();
+                
 
                 // Chống gõ linh tinh
                 if(strGia.isEmpty()) strGia = "0";
-                if(strThue.isEmpty()) strThue = "0";
+                
 
                 java.math.BigDecimal gia = new java.math.BigDecimal(strGia);
-                java.math.BigDecimal thue = new java.math.BigDecimal(strThue);
+                
 
                 GiaHangChuyenBayDTO d = new GiaHangChuyenBayDTO();
                 d.setChuyenBayId(chuyenBayId);
                 d.setHangGheId(hangGheId);
                 d.setGiaCoBan(gia);
-                d.setThuePhi(thue);
+                
 
                 // INSERT HAY UPDATE?
                 GiaHangChuyenBayDTO old = dao.findByChuyenBayAndHangGhe(chuyenBayId, hangGheId);
@@ -451,5 +510,25 @@ public void applyPermissions(List<Integer> actionIds) {
     btnGiaHang.setVisible(actionIds.contains(ActionConstants.GIA_HANG_GHE));
     btnSeatMap.setVisible(actionIds.contains(ActionConstants.SO_DO_GHE));
     revalidate(); repaint();
+}
+private void loadHangHKToCombo() {
+    cbHangHK.removeAllItems();
+    List<HangHangKhongDTO> list = hangBUS.getDsHHK(); // 🔥 đúng BUS của bạn
+
+    for (HangHangKhongDTO h : list) {
+        cbHangHK.addItem(new HHKItem(
+            h.getHangHangKhongId(),
+            "ID=" + h.getHangHangKhongId() + " | " + h.getTenHang()
+        ));
+    }
+}
+private void selectComboHHKById(int id) {
+    for (int i = 0; i < cbHangHK.getItemCount(); i++) {
+        HHKItem it = cbHangHK.getItemAt(i);
+        if (it != null && it.id == id) {
+            cbHangHK.setSelectedIndex(i);
+            return;
+        }
+    }
 }
 }

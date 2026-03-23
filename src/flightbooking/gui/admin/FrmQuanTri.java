@@ -127,11 +127,19 @@ try {
         JPanel sidebar = buildSidebar();
         JPanel content = nav.getRoot();
 
-        JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, sidebar, content);
-        split.setDividerLocation(240);
-        split.setOneTouchExpandable(true);
+        
+        
 
-        setContentPane(split);
+        JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, sidebar, content);
+split.setDividerLocation(240);
+split.setOneTouchExpandable(true);
+
+// 🔥 WRAP lại để thêm header
+JPanel root = new JPanel(new BorderLayout());
+root.add(buildHeader(), BorderLayout.NORTH); // 👈 thêm dòng này
+root.add(split, BorderLayout.CENTER);
+
+setContentPane(root);
     }
 
     private JPanel buildSidebar() {
@@ -226,4 +234,54 @@ try {
         revalidate();
         repaint();
     }
+
+    private JPanel buildHeader() {
+
+    JPanel header = new JPanel(new BorderLayout());
+    header.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
+    header.setBackground(new Color(245, 245, 245));
+
+    // 👤 Xin chào
+    String username = SessionContext.getAdminUsername();
+    JLabel lblHello = new JLabel("Xin chào, " + username);
+    lblHello.setFont(new Font("Arial", Font.BOLD, 14));
+
+    // 🔴 Nút logout
+    JButton btnLogout = new JButton("Đăng xuất");
+
+    btnLogout.addActionListener(e -> {
+        int confirm = JOptionPane.showConfirmDialog(
+                this,
+                "Bạn có chắc muốn đăng xuất?",
+                "Xác nhận",
+                JOptionPane.YES_NO_OPTION
+        );
+
+        if (confirm == JOptionPane.YES_OPTION) {
+            SessionContext.clearAll(); // 🔥 clear session
+
+            dispose(); // đóng admin
+
+            new FrmDangNhapNhanVien().setVisible(true); // quay lại login
+        }
+    });
+
+    JButton btnChangePass = new JButton("Đổi mật khẩu");
+
+btnChangePass.addActionListener(e -> {
+    new FrmDoiMatKhau().setVisible(true);
+});
+
+// 👉 panel chứa button bên phải
+JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+right.setOpaque(false);
+
+right.add(btnChangePass);
+right.add(btnLogout);
+
+header.add(lblHello, BorderLayout.WEST);
+header.add(right, BorderLayout.EAST);
+
+    return header;
+}
 }

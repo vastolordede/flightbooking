@@ -9,6 +9,7 @@ import flightbooking.dto.NhanVienDTO;
 import flightbooking.dto.PhongBanDTO;
 import flightbooking.dto.QuyenDTO;
 import flightbooking.util.ActionConstants;
+import flightbooking.util.ExcelExporter;
 
 import java.awt.*;
 import java.math.BigDecimal;
@@ -51,13 +52,14 @@ public class PnlQuanLyNhanVien extends JPanel {
     private JButton btnUpdate;
     private JButton btnDelete;
     private JButton btnClear;
+    private JButton btnExport;
 
     private final JTextField txtHoTen = new JTextField();
     private final JTextField txtEmail = new JTextField();
     private final JTextField txtDienThoai = new JTextField();
     private final JTextField txtLuong = new JTextField();
-    private final JTextField txtNgayVaolam = new JTextField();
-    private final JTextField txtNgayNghi = new JTextField();
+    private final JSpinner spNgayVaoLam = new JSpinner(new SpinnerDateModel());
+private final JSpinner spNgayNghi = new JSpinner(new SpinnerDateModel());
 
     private final JComboBox<Item> cbPhongBan = new JComboBox<>();
     private final JComboBox<Item> cbChucVu = new JComboBox<>();
@@ -79,6 +81,8 @@ public class PnlQuanLyNhanVien extends JPanel {
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         cbTrangThai.setEnabled(false);
         txtQuyen.setEditable(false);
+        spNgayVaoLam.setEditor(new JSpinner.DateEditor(spNgayVaoLam, "yyyy-MM-dd"));
+spNgayNghi.setEditor(new JSpinner.DateEditor(spNgayNghi, "yyyy-MM-dd"));
 
         btnPhanQuyen.addActionListener(e -> openPermissionDialog());
 
@@ -98,65 +102,103 @@ public class PnlQuanLyNhanVien extends JPanel {
     }
 
     private JPanel buildForm() {
+    JPanel form = new JPanel(new GridBagLayout());
+    form.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
 
-        JPanel form = new JPanel(new GridLayout(4,4,10,10));
+    GridBagConstraints lc = new GridBagConstraints();
+    lc.anchor = GridBagConstraints.WEST;
+    lc.insets = new Insets(6, 0, 6, 8);
 
-        form.add(new JLabel("Họ tên"));
-        form.add(txtHoTen);
+    GridBagConstraints fc = new GridBagConstraints();
+    fc.fill = GridBagConstraints.HORIZONTAL;
+    fc.weightx = 1.0;
+    fc.insets = new Insets(6, 0, 6, 16);
+btnExport = new JButton("Xuất Excel");
+btnExport.addActionListener(e -> {
+    ExcelExporter.export(table, this);
+});
+    // Hàng 0: Họ tên | Email | Số điện thoại
+    addFormRow(form, lc, fc, 0, 0, "Họ tên", txtHoTen);
+    addFormRow(form, lc, fc, 0, 2, "Email", txtEmail);
+    addFormRow(form, lc, fc, 0, 4, "Số điện thoại", txtDienThoai);
 
-        form.add(new JLabel("Email"));
-        form.add(txtEmail);
+    // Hàng 1: Lương | Ngày vào làm | Ngày nghỉ
+    addFormRow(form, lc, fc, 1, 0, "Lương cơ bản", txtLuong);
+    addFormRow(form, lc, fc, 1, 2, "Ngày vào làm", spNgayVaoLam);
+addFormRow(form, lc, fc, 1, 4, "Ngày nghỉ", spNgayNghi);
 
-        form.add(new JLabel("Số điện thoại"));
-        form.add(txtDienThoai);
+    // Hàng 2: Phòng ban | Chức vụ | Trạng thái
+    addFormRow(form, lc, fc, 2, 0, "Phòng ban", cbPhongBan);
+    addFormRow(form, lc, fc, 2, 2, "Chức vụ", cbChucVu);
+    addFormRow(form, lc, fc, 2, 4, "Trạng thái", cbTrangThai);
 
-        form.add(new JLabel("Lương cơ bản"));
-        form.add(txtLuong);
+    // Hàng 3: Quyền
+    lc.gridx = 0; lc.gridy = 3;
+    form.add(makeLabel("Quyền"), lc);
+    fc.gridx = 1; fc.gridy = 3;
+    fc.gridwidth = 5;
+    form.add(buildPermissionBox(), fc);
+    fc.gridwidth = 1;
 
-        form.add(new JLabel("Ngày vào làm (yyyy-MM-dd)"));
-        form.add(txtNgayVaolam);
+    // Style các field
+    for (JTextField f : new JTextField[]{
+        txtHoTen, txtEmail, txtDienThoai, txtLuong
+}) {
+    styleField(f);
+}
 
-        form.add(new JLabel("Ngày nghỉ (yyyy-MM-dd)"));
-        form.add(txtNgayNghi);
+    btnAdd    = new JButton("Thêm");
+    btnUpdate = new JButton("Sửa");
+    btnDelete = new JButton("Xóa");
+    btnClear  = new JButton("Làm mới");
 
-        form.add(new JLabel("Phòng ban"));
-        form.add(cbPhongBan);
+    btnAdd.addActionListener(e -> add());
+    btnUpdate.addActionListener(e -> update());
+    btnDelete.addActionListener(e -> delete());
+    btnClear.addActionListener(e -> { table.clearSelection(); clearForm(); });
 
-        form.add(new JLabel("Chức vụ"));
-        form.add(cbChucVu);
+    JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+    actions.add(btnClear);
+    actions.add(btnAdd);
+    actions.add(btnUpdate);
+    actions.add(btnDelete);
+    btnExport = new JButton("Xuất Excel");
+btnExport.addActionListener(e -> {
+    ExcelExporter.export(table, this);
+});
 
-        form.add(new JLabel("Trạng thái"));
-        form.add(cbTrangThai);
+actions.add(btnExport);
 
-        form.add(new JLabel("Quyền"));
-        form.add(buildPermissionBox());
+    JPanel wrap = new JPanel(new BorderLayout(0, 8));
+    wrap.add(form, BorderLayout.CENTER);
+    wrap.add(actions, BorderLayout.SOUTH);
+    return wrap;
+}
 
-        btnAdd = new JButton("Thêm");
-        btnUpdate = new JButton("Sửa");
-        btnDelete = new JButton("Xóa");
-        btnClear = new JButton("Làm mới");
+// Helper: thêm 1 cặp label + field vào đúng ô
+private void addFormRow(JPanel form, GridBagConstraints lc,
+                        GridBagConstraints fc, int row, int col,
+                        String labelText, JComponent field) {
+    lc.gridx = col;     lc.gridy = row;
+    form.add(makeLabel(labelText), lc);
+    fc.gridx = col + 1; fc.gridy = row;
+    form.add(field, fc);
+}
 
-        btnAdd.addActionListener(e -> add());
-        btnUpdate.addActionListener(e -> update());
-        btnDelete.addActionListener(e -> delete());
-        btnClear.addActionListener(e -> {
-            table.clearSelection();
-            clearForm();
-        });
+private JLabel makeLabel(String text) {
+    JLabel lb = new JLabel(text);
+    lb.setFont(lb.getFont().deriveFont(Font.PLAIN, 13f));
+    return lb;
+}
 
-        JPanel wrap = new JPanel(new BorderLayout(10,10));
-        wrap.add(form, BorderLayout.CENTER);
-
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        actions.add(btnClear);
-        actions.add(btnAdd);
-        actions.add(btnUpdate);
-        actions.add(btnDelete);
-
-        wrap.add(actions, BorderLayout.SOUTH);
-
-        return wrap;
-    }
+private void styleField(JTextField field) {
+    field.setPreferredSize(new Dimension(160, 30));
+    field.setFont(field.getFont().deriveFont(13f));
+    field.setBorder(BorderFactory.createCompoundBorder(
+        BorderFactory.createLineBorder(new Color(200, 200, 200)),
+        BorderFactory.createEmptyBorder(3, 8, 3, 8)
+    ));
+}
 
     private JPanel buildPermissionBox() {
         JPanel p = new JPanel(new BorderLayout(5, 0));
@@ -202,20 +244,22 @@ public class PnlQuanLyNhanVien extends JPanel {
     }
 
     private void clearForm() {
-        txtHoTen.setText("");
-        txtEmail.setText("");
-        txtDienThoai.setText("");
-        txtLuong.setText("");
-        txtNgayVaolam.setText("");
-        txtNgayNghi.setText("");
-        txtQuyen.setText("");
+    txtHoTen.setText("");
+    txtEmail.setText("");
+    txtDienThoai.setText("");
+    txtLuong.setText("");
 
-        if (cbPhongBan.getItemCount() > 0) cbPhongBan.setSelectedIndex(0);
-        if (cbChucVu.getItemCount() > 0) cbChucVu.setSelectedIndex(0);
+    spNgayVaoLam.setValue(new java.util.Date());
+    spNgayNghi.setValue(new java.util.Date());
 
-        cbTrangThai.setSelectedIndex(0);
-        cbTrangThai.setEnabled(false);
-    }
+    txtQuyen.setText("");
+
+    if (cbPhongBan.getItemCount() > 0) cbPhongBan.setSelectedIndex(0);
+    if (cbChucVu.getItemCount() > 0) cbChucVu.setSelectedIndex(0);
+
+    cbTrangThai.setSelectedIndex(0);
+    cbTrangThai.setEnabled(false);
+}
 
     private void fillForm() {
         int row = table.getSelectedRow();
@@ -228,10 +272,25 @@ public class PnlQuanLyNhanVien extends JPanel {
         txtEmail.setText(nv.getEmail());
         txtDienThoai.setText(nv.getDienThoai());
         txtLuong.setText(String.valueOf(nv.getLuongCoBan()));
-        txtNgayVaolam.setText(String.valueOf(nv.getNgayVaoLam()));
-        txtNgayNghi.setText(
-            nv.getNgayNghi() == null ? "" : nv.getNgayNghi().toString()
-        );
+        if (nv.getNgayVaoLam() != null) {
+    spNgayVaoLam.setValue(
+        java.util.Date.from(
+            nv.getNgayVaoLam()
+            .atStartOfDay(java.time.ZoneId.systemDefault())
+            .toInstant()
+        )
+    );
+}
+
+if (nv.getNgayNghi() != null) {
+    spNgayNghi.setValue(
+        java.util.Date.from(
+            nv.getNgayNghi()
+            .atStartOfDay(java.time.ZoneId.systemDefault())
+            .toInstant()
+        )
+    );
+}
 
         selectComboById(cbPhongBan, nv.getPhongBanId());
         selectComboById(cbChucVu, nv.getChucVuId());
@@ -462,21 +521,20 @@ public class PnlQuanLyNhanVien extends JPanel {
         }
 
         try {
-            nv.setNgayVaoLam(LocalDate.parse(txtNgayVaolam.getText().trim()));
+            java.util.Date d1 = (java.util.Date) spNgayVaoLam.getValue();
+nv.setNgayVaoLam(
+    d1.toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+);
         } catch (Exception e) {
             throw new RuntimeException("Ngày vào sai định dạng yyyy-MM-dd.");
         }
 
-        String ngayNghiText = txtNgayNghi.getText().trim();
-        if (!ngayNghiText.isEmpty()) {
-            try {
-                nv.setNgayNghi(LocalDate.parse(ngayNghiText));
-            } catch (Exception e) {
-                throw new RuntimeException("Ngày nghỉ sai định dạng yyyy-MM-dd.");
-            }
-        } else {
-            nv.setNgayNghi(null);
-        }
+        java.util.Date d2 = (java.util.Date) spNgayNghi.getValue();
+
+nv.setNgayNghi(
+    d2.toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+);
+       
 
         Item pb = (Item) cbPhongBan.getSelectedItem();
         Item cv = (Item) cbChucVu.getSelectedItem();
